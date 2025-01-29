@@ -1,2 +1,3 @@
 Header header
-float64[13] state_vector
+float64[12] state_vector
+#[x, v, q, w]

@@ -9,10 +9,10 @@
 
   <!-- allowed autopilots: "asctec" or "arducopter" -->
   <arg name="autopilot"                 default="arducopter" />
-  <arg name="vicon_topic" />
+  <arg name="vicon_topic"               default="/vicon/BRIDGE_DRONE/BRIDGE_DRONE" />
 
   <!-- use "device:baudrate" for apm, "device" for asctec -->
-  <arg name="comm_port"                 default="/dev/ttyUSB0:57600"/>
+  <arg name="comm_port"                 default="udp://127.0.0.1:14551@14555"/>
   <arg name="total_mass"                default="0.95"/>
   <arg name="thrust_scaler" 		        default="200.0"/>
 
@@ -34,7 +34,7 @@
   <!-- state source can be: "apm", "asctec", "vicon" or "onboard_camera" -->
   <!-- implemented filters: "median", "gauss" and "lwma" -->
   <node name="state_manager" pkg="state_manager" type="state_manager_node">
-    <param name="state_source"  type="string"   value="vicon" />
+    <param name="state_source"  type="string"   value="apm" />
     <param name="filter_type"   type="string"   value="median" />
     <param name="vicon_topic"   type="string"   value="$(arg vicon_topic)" />
   </node>
@@ -95,5 +95,7 @@
   
   <!-- record stuff -->
   <node name="recorder" pkg="rosbag" type="record" args="-a" if="$(eval start_rosbag)"/>
+  
+  <node name="angle_receiver_node" pkg="arduino_raspi_communication" type="angle_receiver_node.py" />
   
 </launch>

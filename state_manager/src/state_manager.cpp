@@ -27,6 +27,7 @@ StateManager::StateManager() : nh_(), priv_nh_("~")
   else if( state_source_ == "onboard_camera" )
     initCameraManager();
 
+  //initVariables(RAB_old);
 
   /* Announce state publisher */
   state_pub_ = nh_.advertise <freyja_msgs::CurrentState>
@@ -76,6 +77,8 @@ StateManager::StateManager() : nh_(), priv_nh_("~")
   prev_vd_.resize( filter_len_ );
   lastUpdateTime_ = ros::Time::now();
   have_location_fix_ = false;
+
+  //variable initialization:
 }
 
 void StateManager::initViconManager()
@@ -87,6 +90,13 @@ void StateManager::initViconManager()
   vicon_data_sub_ = nh_.subscribe( vicon_topic, 1,
                                     &StateManager::viconCallback, this,
                                     ros::TransportHints().tcpNoDelay() );
+  payload_sub_ = nh_.subscribe( "/theta_info", 1, &StateManager::payloadCallback, this );
+
+  
+  RAB_old << 1, 0, 0,
+              0, 1, 0,
+              0, 0, 0; //initialize as identity matrix
+              
 }
 
 void StateManager::initAsctecManager()
@@ -113,6 +123,14 @@ void StateManager::initPixhawkManager()
 				                
   maplock_srv_ = nh_.advertiseService( "/lock_arming_mapframe", 
                         &StateManager::maplockArmingHandler, this );
+  payload_sub_ = nh_.subscribe( "/theta_info", 1, &StateManager::payloadCallback, this );
+
+  
+  
+  RAB_old << 1, 0, 0,
+              0, 1, 0,
+              0, 0, 0; //initialize as identity matrix
+              
 }
 
 void StateManager::initCameraManager()
@@ -120,7 +138,14 @@ void StateManager::initCameraManager()
   camera_estimate_sub_ = nh_.subscribe( "/onboard_camera/position_velocity", 1,
                                 &StateManager::cameraUpdatesCallback, this );
 }
-
+/*
+void StateManager::initVariables(Eigen::Matrix3d A)
+{
+  A << 1, 0, 0,
+      0, 1, 0,
+      0, 0, 1;
+}
+*/
 
 int main( int argc, char **argv )
 {

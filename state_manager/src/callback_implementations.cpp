@@ -7,11 +7,11 @@ void StateManager::viconCallback( const TFStamped::ConstPtr &msg )
   
   double time_since = (ros::Time::now() - lastUpdateTime_).toSec();
   
-  double x, y, z;
-  x = msg -> transform.translation.y;
-  y = msg -> transform.translation.x;
-  z = -(msg -> transform.translation.z);
+  px_ = msg -> transform.translation.y;
+  py_ = msg -> transform.translation.x;
+  pz_ = -(msg -> transform.translation.z);
 
+  /*
   prev_pn_.erase( prev_pn_.begin() );
   prev_pn_.push_back( x );
   prev_pe_.erase( prev_pe_.begin() );
@@ -20,13 +20,14 @@ void StateManager::viconCallback( const TFStamped::ConstPtr &msg )
   prev_pd_.push_back( z );
 
   pose_filter_.filterObservations( prev_pn_, prev_pe_, prev_pd_, x, y, z );
+  */
 
-  /* positions */
+  /* positions
   state_vector_[0] = x;
   state_vector_[1] = y;
-  state_vector_[2] = z;
+  state_vector_[2] = z; */
   
-  /* velocities */
+  /* velocities 
   double vx, vy, vz;
   vx = ( x - last_pn_ )/time_since; //[3]
   vy = ( y - last_pe_ )/time_since; //[4]
@@ -43,42 +44,94 @@ void StateManager::viconCallback( const TFStamped::ConstPtr &msg )
   state_vector_[3] = vx;
   state_vector_[4] = vy;
   state_vector_[5] = vz;
-  
-  /* rpy */
-  tf::Quaternion q;
-  tf::quaternionMsgToTF( msg -> transform.rotation, q );
-  double roll, pitch, yaw;
-  tf::Matrix3x3(q).getRPY( roll, pitch, yaw );
-  state_vector_[6] = roll;
-  state_vector_[7] = pitch;
-  state_vector_[8] = -yaw;
+  */ 
+  vx_ = (px_ - px_old_)/time_since;
+  vy_ = (py_ - py_old_)/time_since;
+  vz_ = (pz_ - pz_old_)/time_since;
 
+  /* fetch components from quaternion, make rotation matrix */
+  //NED quaternion- take components of ENU quaternion, swap axes. Quaternion is in form [w x y z] = [qw qx qy qz]
+  float qw, qx, qy, qz;
+  qw = msg -> transform.rotation.w;
+  qx = msg -> transform.rotation.y;
+  qy = msg -> transform.rotation.x;
+  qz = -1*(msg -> transform.rotation.z);
+  //for simplicity, define squares of terms
+  float qw2 = std::pow(qw, 2);
+  float qx2 = std::pow(qx, 2);
+  float qy2 = std::pow(qy, 2);
+  float qz2 = std::pow(qz, 2);
+  //form rotation matrix
+  RAB << (1-2*(qy2 - qz2)), 2*(qx*qy - qz*qw), 2*(qx*qz + qy*qw),
+      2*(qx*qy + qz*qw), (1-2*(qx2 - qz2)), 2*(qy*qz - qx*qw),
+      2*(qx*qz - qy*qw), 2*(qy*qz + qx*qw), (1-2*(qx2 - qy2));
+  /*
+  Eigen::MatrixXf Rab_roll;
+  Eigen::MatrixXf Rab_pitch;
+  Eigen::MatrixXf Rab_yaw;
+  Eigen::MatrixXf Rab_roll_old;
+  Eigen::MatrixXf Rab_pitch_old;
+  Eigen::MatrixXf Rab_yaw_old;
+  Rab_roll << 1, 0, 0,
+            0, std::cos(drone_roll_), -1*std::sin(drone_roll_),
+            0, std::sin(drone_roll_), std::cos(drone_roll_);
+  Rab_pitch << std::cos(drone_pitch_), 0, std::sin(drone_pitch_),
+          0, 1, 0
+          -1*std::sin(drone_pitch_), 0, std::cos(drone_pitch_);
+  Rab_yaw << std::cos(drone_yaw_), -1*std::sin(drone_yaw_), 0,
+              std::sin(drone_yaw_), std::cos(drone_yaw_), 0,
+              0, 0, 1;
+  RAB = Rab_roll*Rab_pitch*Rab_yaw;
+  //
+  Rab_roll_old << 1, 0, 0,
+            0, std::cos(drone_roll_old_), -1*std::sin(drone_roll_old_),
+            0, std::sin(drone_roll_old_), std::cos(drone_roll_old_);
+  Rab_pitch_old << std::cos(drone_pitch_old_), 0, std::sin(drone_pitch_old_),
+          0, 1, 0
+          -1*std::sin(drone_pitch_old_), 0, std::cos(drone_pitch_old_);
+  Rab_yaw_old << std::cos(drone_yaw_old_), -1*std::sin(drone_yaw_old_), 0,
+              std::sin(drone_yaw_old_), std::cos(drone_yaw_old_), 0,
+              0, 0, 1;
+  RAB_old = Rab_roll_old*Rab_pitch_old*Rab_yaw_old; */
+
+  RAB_dot = (RAB - RAB_old)/time_since;
   
-  /* rpy rates (no filter yet, use with caution!) */
+  /* rpy rates (no filter yet, use with caution!)
   state_vector_[9] = ( roll - last_roll_ )/time_since;
   state_vector_[10] = ( pitch - last_pitch_ )/time_since;
   state_vector_[11] = ( yaw - last_yaw_ )/time_since;
-  
-  /* age of this data */
+  */
+  /* age of this data
   state_vector_[12] = time_since;
+  */
   
   /* Update the current time this happened */
   lastUpdateTime_ = ros::Time::now();
   
-  /* bookkeeping stuff */
+  /*update old variables*/
+  px_old_ = px_;
+  py_old_ = py_;
+  pz_old_ = pz_;
+  RAB_old = RAB;
+  /*
+  drone_roll_old_ = drone_roll_;
+  drone_pitch_old_ = drone_pitch_;
+  drone_yaw_old_ = drone_yaw_;*/
+  /* bookkeeping stuff 
   last_pn_ = state_vector_[0];
   last_pe_ = state_vector_[1];
   last_pd_ = state_vector_[2];
   last_roll_ = roll;
   last_pitch_ = pitch;
-  last_yaw_ = yaw;
+  last_yaw_ = yaw; */
   
-  /* Copy over and publish right away */
+  /* Copy over and publish right away
   static freyja_msgs::CurrentState state_msg;
   state_msg.header.stamp = ros::Time::now();
   for( uint8_t idx = 0; idx < STATE_VECTOR_LEN; idx++ )
     state_msg.state_vector[idx] = state_vector_[idx];
   state_pub_.publish( state_msg );
+  */
 }
 
 void StateManager::asctecDataCallback( const freyja_msgs::AsctecData::ConstPtr &msg )
@@ -144,12 +197,13 @@ void StateManager::asctecDataCallback( const freyja_msgs::AsctecData::ConstPtr &
   last_pe_ = state_vector_[1];
   last_pd_ = state_vector_[2];
   
-  /* Copy over and publish right away */
+  /* Copy over and publish right away 
   freyja_msgs::CurrentState state_msg;
   state_msg.header.stamp = ros::Time::now();
   for( uint8_t idx = 0; idx < STATE_VECTOR_LEN; idx++ )
     state_msg.state_vector[idx] = state_vector_[idx];
   state_pub_.publish( state_msg );
+  */
 }
 
 void StateManager::mavrosGpsRawCallback( const sensor_msgs::NavSatFix::ConstPtr& msg )
@@ -180,13 +234,47 @@ void StateManager::mavrosCompassCallback( const std_msgs::Float64::ConstPtr &msg
 
 void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &msg )
 {
+  double time_since = (ros::Time::now() - lastUpdateTime_).toSec();
+  px_ = msg -> pose.pose.position.y;
+  py_ = msg -> pose.pose.position.x;
+  pz_ = -(msg -> pose.pose.position.z);
+
+  vx_ = (px_ - px_old_)/time_since;
+  vy_ = (py_ - py_old_)/time_since;
+  vz_ = (pz_ - pz_old_)/time_since;
+
+  float qw, qx, qy, qz;
+  qw = msg -> pose.pose.orientation.w;
+  qx = msg -> pose.pose.orientation.y;
+  qy = msg -> pose.pose.orientation.x;
+  qz = -1*(msg -> pose.pose.orientation.z);
+  //for simplicity, define squares of terms
+  float qw2 = std::pow(qw, 2);
+  float qx2 = std::pow(qx, 2);
+  float qy2 = std::pow(qy, 2);
+  float qz2 = std::pow(qz, 2);
+  //form rotation matrix
+  RAB << (1-2*(qy2 + qz2)), 2*(qx*qy - qz*qw), 2*(qx*qz + qy*qw),
+      2*(qx*qy + qz*qw), (1-2*(qx2 + qz2)), 2*(qy*qz - qx*qw),
+      2*(qx*qz - qy*qw), 2*(qy*qz + qx*qw), (1-2*(qx2 + qy2));
+  
+  RAB_dot = (RAB - RAB_old)/time_since;
+  /* Update the current time this happened */
+  lastUpdateTime_ = ros::Time::now();
+
+  /*update old variables*/
+  px_old_ = px_;
+  py_old_ = py_;
+  pz_old_ = pz_;
+  RAB_old = RAB;
+  
   /* Callback for odometry direct from the Pixhawk.
   Note that this is Pixhawk's best estimate of where it is in the world,
   there is no need to filter it, only structure it to our format.
   Likely topics:
         /mavros/global_position/local --> does not zero at arming.
         /mavros/local_position/local  --> zeros at arming, has IMU frame quirk.
-  */
+  
   
   static double pn, pe, pd, vn, ve, vd;
   
@@ -221,6 +309,7 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   
   state_msg.header.stamp = ros::Time::now();
   state_pub_.publish( state_msg );
+  */
 }
 
 
@@ -252,7 +341,81 @@ bool StateManager::maplockArmingHandler( BoolServReq& rq, BoolServRsp& rp )
   }
   return true;
 }
+void StateManager::payloadCallback( const std_msgs::Float32MultiArray::ConstPtr &msg )
+{
+  float payload_roll_deg = msg -> data[0];
+  float payload_pitch_deg = msg -> data[1];
+  float payload_roll_dot_deg = msg -> data[2];
+  float payload_pitch_dot_deg = msg -> data[3];
+  //convert to rad
+  float payload_roll_rad = payload_roll_deg*3.14159/180;
+  float payload_pitch_rad = payload_pitch_deg*3.14159/180;
+  float payload_roll_dot_rad = payload_roll_dot_deg*3.14159/180;
+  float payload_pitch_dot_rad = payload_pitch_dot_deg*3.14159/180;
+  Eigen::Matrix3f Rbc_pitch;
+  Eigen::Matrix3f Rbc_roll;
+  Eigen::Matrix3f Rbc_yaw;
+  /*Because of ENU to NED conversion, apply a yaw to the payload. In ENU convention, drone facing north is 90 degrees yaw.
+  When we convert to NED, this becomes -90 degrees yaw. However, we want yaw to be 0 degrees at north, not -90 degrees at north. 
+  Therefore, we add a 90 degree yaw to the payload to fix this problem.*/
+  float yaw_payload = 90*3.14159/180;
+  Rbc_pitch << std::cos(payload_pitch_rad), 0, std::sin(payload_pitch_rad),
+              0, 1, 0,
+              -1*std::sin(payload_pitch_rad), 0, std::cos(payload_pitch_rad);
+  Rbc_roll << 1, 0, 0,
+              0, std::cos(payload_roll_rad), -1*std::sin(payload_roll_rad),
+              0, std::sin(payload_roll_rad), std::cos(payload_roll_rad);
+  Rbc_yaw << std::cos(yaw_payload), -1*std::sin(yaw_payload), 0,
+              std::sin(yaw_payload), std::cos(yaw_payload), 0,
+              0, 0, 1;
+  Eigen::Matrix3f RBC = Rbc_yaw*Rbc_pitch*Rbc_roll;//rotation matrix that transforms C frame (payload) to B frame (drone)
+  
+  float wp_x = payload_roll_dot_rad*std::cos(payload_pitch_rad);
+  float wp_y = payload_pitch_dot_rad;
+  float wp_z = -1*payload_roll_dot_rad*std::sin(payload_pitch_rad);
+  //calculate total angular velocity
+  Eigen::Matrix3f wd_skew; //skew symmetric matrix
+  wd_skew = RAB_dot*(RAB.transpose());
+  float wd_x, wd_y, wd_z;
+  wd_x = -1*wd_skew(1,2);
+  wd_y = wd_skew(0,2);
+  wd_z = -1*wd_skew(0,1);
+  Eigen::Vector3f wp_B; //payload angular velocity in B frame
+  wp_B(0,0) = wp_x;
+  wp_B(1,0) = wp_y;
+  wp_B(2,0) = wp_z;
+  Eigen::Vector3f wp_A;
+  wp_A = RAB*wp_B;
+  float w_total_x, w_total_y, w_total_z;
+  w_total_x = wd_x + wp_A(0,0);
+  w_total_y = wd_y + wp_A(1,0);
+  w_total_z = wd_z + wp_A(2,0);
+  //calculate q vector
+  Eigen::Vector3f q_(3,1);
+  Eigen::Vector3f k_(3,1);
+  k_ << 0, 0, 1;
+  q_ = RAB*RBC*k_;
+  float qx_ = q_(0,0);
+  float qy_ = q_(1,0);
+  float qz_ = q_(2,0);
 
+  static freyja_msgs::CurrentState state_msg;
+  state_msg.header.stamp = ros::Time::now();
+  //putting stuff in state vector
+  state_msg.state_vector[0] = px_; //pn
+  state_msg.state_vector[1] = py_; //pe
+  state_msg.state_vector[2] = pz_; //pd
+  state_msg.state_vector[3] = vx_; //vn
+  state_msg.state_vector[4] = vy_; //ve
+  state_msg.state_vector[5] = vz_; //vd
+  state_msg.state_vector[6] = qx_ ;//qn
+  state_msg.state_vector[7] = qy_ ;//qe
+  state_msg.state_vector[8] = qz_ ;//qd
+  state_msg.state_vector[9] = w_total_x;//wn
+  state_msg.state_vector[10] = w_total_y;//we
+  state_msg.state_vector[11] = w_total_z;//wd*/
+  state_pub_.publish( state_msg );
+}
 void StateManager::cameraUpdatesCallback( const CameraOdom::ConstPtr &msg )
 {
   /* Assume that camera directly gives us positions AND velocity. This is

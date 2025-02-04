@@ -13,7 +13,7 @@
 
   <!-- use "device:baudrate" for apm, "device" for asctec -->
   <arg name="comm_port"                 default="udp://127.0.0.1:14551@14555"/>
-  <arg name="total_mass"                default="0.95"/>
+  <arg name="total_mass"                default="2.95"/>
   <arg name="thrust_scaler" 		        default="200.0"/>
 
   <!-- launch a handler for discrete waypoints -->
@@ -39,8 +39,8 @@
     <param name="vicon_topic"   type="string"   value="$(arg vicon_topic)" />
   </node>
 
-
-  <!-- control node (see velctrl flag above) -->
+  <!--
+   control node (see velctrl flag above)
   <node name="lqg_controller" pkg="lqg_control" type="lqg_control_node"
   			output="screen" if="$(eval not use_velctrl_only)">
 	  <param name="controller_rate"     type="int"    value="45"  />
@@ -52,12 +52,15 @@
   	<param name="mass_correction"     type="bool"   value="false" />
   	<param name="enable_flatness_ff"  type="bool"   value="$(arg enable_flatness_ff)" />
   </node>
+  -->
   
+  <!--
   <node name="lqr_vel_controller" pkg="lqr_control" type="lqr_vel_ctrl_node"
   			if="$(eval use_velctrl_only)">
     <param name="controller_rate"   type="int"    value="30" />
     <param name="total_mass"        type="double" value="$(arg total_mass)" />
   </node>
+  -->
 
 
   <!-- autopilot communication node -->
@@ -95,7 +98,8 @@
   
   <!-- record stuff -->
   <node name="recorder" pkg="rosbag" type="record" args="-a" if="$(eval start_rosbag)"/>
-  
+  <!--
   <node name="angle_receiver_node" pkg="arduino_raspi_communication" type="angle_receiver_node.py" />
+  -->
   
 </launch>

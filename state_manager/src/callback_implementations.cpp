@@ -341,17 +341,24 @@ bool StateManager::maplockArmingHandler( BoolServReq& rq, BoolServRsp& rp )
   }
   return true;
 }
-void StateManager::payloadCallback( const std_msgs::Float32MultiArray::ConstPtr &msg )
+//void StateManager::payloadCallback( const std_msgs::Float32MultiArray::ConstPtr &msg )
+void StateManager::payloadCallback( const sensor_msgs::JointState::ConstPtr &msg )
 {
-  float payload_roll_deg = msg -> data[0];
+  /*float payload_roll_deg = msg -> data[0];
   float payload_pitch_deg = msg -> data[1];
   float payload_roll_dot_deg = msg -> data[2];
   float payload_pitch_dot_deg = msg -> data[3];
+  
   //convert to rad
   float payload_roll_rad = payload_roll_deg*3.14159/180;
   float payload_pitch_rad = payload_pitch_deg*3.14159/180;
   float payload_roll_dot_rad = payload_roll_dot_deg*3.14159/180;
   float payload_pitch_dot_rad = payload_pitch_dot_deg*3.14159/180;
+  */
+  float payload_roll_rad = msg -> position[0];
+  float payload_pitch_rad = msg -> position[1];
+  float payload_roll_dot_rad = msg -> velocity[0];
+  float payload_pitch_dot_rad = msg -> velocity[1];
   Eigen::Matrix3f Rbc_pitch;
   Eigen::Matrix3f Rbc_roll;
   Eigen::Matrix3f Rbc_yaw;

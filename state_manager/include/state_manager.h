@@ -14,6 +14,7 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include <sensor_msgs/NavSatFix.h>
+#include <sensor_msgs/JointState.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Float64.h>
 #include <std_msgs/Float32MultiArray.h>
@@ -132,7 +133,8 @@ class StateManager
     
     /* Callback handler for payload data */
     ros::Subscriber payload_sub_;
-    void payloadCallback( const std_msgs::Float32MultiArray::ConstPtr & );
+    //void payloadCallback( const std_msgs::Float32MultiArray::ConstPtr & );
+    void payloadCallback(const sensor_msgs::JointState::ConstPtr &);
 
     /* handlers for locking map frame origins */
     inline void lockArmingGps( bool _lock = true )

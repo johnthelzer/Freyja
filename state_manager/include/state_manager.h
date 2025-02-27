@@ -14,15 +14,14 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include <sensor_msgs/NavSatFix.h>
-#include <sensor_msgs/JointState.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Float64.h>
-#include <std_msgs/Float32MultiArray.h>
 #include <tf/tf.h>
 #include <std_srvs/SetBool.h>
-#include <eigen3/Eigen/Dense>
+
 #include <freyja_msgs/CurrentState.h>
 #include <freyja_msgs/AsctecData.h>
+
 #include "freyja_filters.cpp"
 
 typedef geometry_msgs::TransformStamped TFStamped;
@@ -35,9 +34,9 @@ typedef std_srvs::SetBool::Response BoolServRsp;
 #define F_PI 3.14153
 
 /* The full state vector is defined as:
-  [ pn, pe, pd, vn, ve, vd, qn, qe, qd, wn, we, wd]
+  [ pn, pe, pd, vn, ve, vd, roll, pitch, yaw, roll_rate_, pitch_rate_, yaw_rate_ ]
 */
-const int STATE_VECTOR_LEN = 12;
+const int STATE_VECTOR_LEN = 13;
 class StateManager
 {
   ros::NodeHandle nh_, priv_nh_;
@@ -86,17 +85,6 @@ class StateManager
   double gps_odom_pn_, gps_odom_pe_, gps_odom_pd_;
   double rtk_baseoffset_pn_, rtk_baseoffset_pe_, rtk_baseoffset_pd_;
   
-
-  /* global state variables */
-  float px_, py_, pz_, vx_, vy_, vz_;
-  float px_old_ = 0;
-  float py_old_ = 0;
-  float pz_old_ = 0;
-
-  Eigen::Matrix3f RAB;
-  Eigen::Matrix3f RAB_old;  
-  Eigen::Matrix3f RAB_dot;
-
   public:
     StateManager();
     /* launch-time parameter specifies which one to pick */
@@ -104,9 +92,6 @@ class StateManager
     void initAsctecManager();
     void initViconManager();
     void initCameraManager();
-
-    //void initVariables(Eigen::Matrix3d A);
-  
 
     /* Callback handler for Vicon */
     ros::Subscriber vicon_data_sub_;
@@ -129,13 +114,9 @@ class StateManager
     void mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr & );
     void mavrosCompassCallback( const std_msgs::Float64::ConstPtr & );
     void mavrosRtkBaselineCallback( const geometry_msgs::Vector3::ConstPtr & );
+    
     void mavrosGpsRawCallback( const sensor_msgs::NavSatFix::ConstPtr & );
     
-    /* Callback handler for payload data */
-    ros::Subscriber payload_sub_;
-    //void payloadCallback( const std_msgs::Float32MultiArray::ConstPtr & );
-    void payloadCallback(const sensor_msgs::JointState::ConstPtr &);
-
     /* handlers for locking map frame origins */
     inline void lockArmingGps( bool _lock = true )
     {

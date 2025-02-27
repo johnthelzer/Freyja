@@ -10,11 +10,11 @@ plugin_blacklist:
 - setpoint_velocity
 - setpoint_position
 - imu_pub
-- local_position
+#- local_position
 - manual_control
 - adsb
-- fake_gps
-- gps_rtk
+#- fake_gps
+#- gps_rtk
 - log_transfer
 - wind_estimation
 - obstacle_distance

@@ -13,8 +13,8 @@
 
   <!-- use "device:baudrate" for apm, "device" for asctec -->
   <arg name="comm_port"                 default="udp://127.0.0.1:14551@14555"/>
-  <arg name="total_mass"                default="2.95"/>
-  <arg name="thrust_scaler" 		        default="200.0"/>
+  <arg name="total_mass"                default="2.57"/>
+  <arg name="thrust_scaler" 		        default="84"/>
 
   <!-- launch a handler for discrete waypoints -->
   <arg name="use_waypoint_handler"      default="false" />
@@ -98,8 +98,15 @@
   
   <!-- record stuff -->
   <node name="recorder" pkg="rosbag" type="record" args="-a" if="$(eval start_rosbag)"/>
-  <!--
+
+  <!-- angle receiver node- only for when using encoders on real drone
   <node name="angle_receiver_node" pkg="arduino_raspi_communication" type="angle_receiver_node.py" />
   -->
+
+  <!--controller node-->
+  <node name="controller" pkg="control_system" type="controller"/>
+  <!--trajectory generator node-->
+  <node name="trajectory_generator" pkg="control_system" type="trajectory_generator"/>
+
   
 </launch>

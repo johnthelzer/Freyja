@@ -92,7 +92,8 @@ class StateManager
   float px_old_ = 0;
   float py_old_ = 0;
   float pz_old_ = 0;
-
+  double roll_actual;
+  double pitch_actual;
   Eigen::Matrix3f RAB;
   Eigen::Matrix3f RAB_old;  
   Eigen::Matrix3f RAB_dot;

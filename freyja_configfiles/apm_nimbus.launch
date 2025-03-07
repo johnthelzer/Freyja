@@ -30,5 +30,7 @@
 	<!-- global params for keeping mavros under control -->
 	<param name="/mavros/setpoint_attitude/use_quaternion" value="true" />
 	<param name="/mavros/conn/timesync_rate" value="0.0" />
+	<!--use simulation time-->
+	<param name="/use_sim_time" value="true"/>
 	
 </launch>

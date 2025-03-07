@@ -39,8 +39,8 @@ typedef mavros_msgs::AttitudeTarget AttiTarget;
 typedef freyja_msgs::CtrlCommand::ConstPtr CtrlInput;
 
 uint8_t ignore_rates = AttiTarget::IGNORE_ROLL_RATE |
-                        AttiTarget::IGNORE_PITCH_RATE; // |
-                        //AttiTarget::IGNORE_YAW_RATE;
+                        AttiTarget::IGNORE_PITCH_RATE |
+                        AttiTarget::IGNORE_YAW_RATE;
 void sendToMavros( const double&, const double&, const double&, const double& );
 void anglesToDouble( double &tgt_r, double &tgt_p, double &tgt_y )
 {
@@ -91,7 +91,7 @@ void sendToMavros( const double &p, const double &r, const double &y, const doub
   atti_tgt.type_mask = ignore_rates;
   atti_tgt.orientation = tgt_q;
   atti_tgt.thrust = t;
-  atti_tgt.body_rate.z = -y;
+  //atti_tgt.body_rate.z = -y;
   atti_tgt.header.stamp = ros::Time::now();
     
   atti_pub.publish( atti_tgt );

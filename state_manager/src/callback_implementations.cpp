@@ -242,7 +242,7 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   vx_ = (px_ - px_old_)/time_since;
   vy_ = (py_ - py_old_)/time_since;
   vz_ = (pz_ - pz_old_)/time_since;
-
+  //my way of getting rotation matrix
   float qw, qx, qy, qz;
   qw = msg -> pose.pose.orientation.w;
   qx = msg -> pose.pose.orientation.y;
@@ -257,6 +257,12 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   RAB << (1-2*(qy2 + qz2)), 2*(qx*qy - qz*qw), 2*(qx*qz + qy*qw),
       2*(qx*qy + qz*qw), (1-2*(qx2 + qz2)), 2*(qy*qz - qx*qw),
       2*(qx*qz - qy*qw), 2*(qy*qz + qx*qw), (1-2*(qx2 + qy2));
+  
+  //original freyja way of getting roll and pitch
+  tf::Quaternion q;
+  tf::quaternionMsgToTF( msg->pose.pose.orientation, q);
+  double yaw_placeholder;
+  tf::Matrix3x3(q).getRPY(roll_actual, pitch_actual, yaw_placeholder);
   
   RAB_dot = (RAB - RAB_old)/time_since;
   /* Update the current time this happened */
@@ -421,6 +427,8 @@ void StateManager::payloadCallback( const sensor_msgs::JointState::ConstPtr &msg
   state_msg.state_vector[9] = w_total_x;//wn
   state_msg.state_vector[10] = w_total_y;//we
   state_msg.state_vector[11] = w_total_z;//wd*/
+  state_msg.state_vector[12] = roll_actual;
+  state_msg.state_vector[13] = pitch_actual;
   state_pub_.publish( state_msg );
 }
 void StateManager::cameraUpdatesCallback( const CameraOdom::ConstPtr &msg )

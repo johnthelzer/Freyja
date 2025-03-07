@@ -39,8 +39,8 @@ typedef mavros_msgs::AttitudeTarget AttiTarget;
 typedef freyja_msgs::CtrlCommand::ConstPtr CtrlInput;
 
 uint8_t ignore_rates = AttiTarget::IGNORE_ROLL_RATE |
-                        AttiTarget::IGNORE_PITCH_RATE |
-                        AttiTarget::IGNORE_YAW_RATE;
+                        AttiTarget::IGNORE_PITCH_RATE ;//|
+                        //AttiTarget::IGNORE_YAW_RATE;
 void sendToMavros( const double&, const double&, const double&, const double& );
 void anglesToDouble( double &tgt_r, double &tgt_p, double &tgt_y )
 {

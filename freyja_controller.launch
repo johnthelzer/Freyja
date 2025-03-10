@@ -13,7 +13,7 @@
 
   <!-- use "device:baudrate" for apm, "device" for asctec -->
   <arg name="comm_port"                 default="udp://127.0.0.1:14551@14555"/>
-  <arg name="total_mass"                default="2.57"/>
+  <arg name="total_mass"                default="2.13"/>
   <arg name="thrust_scaler" 		        default="84"/>
 
   <!-- launch a handler for discrete waypoints -->
@@ -22,10 +22,10 @@
   <!-- advanced settings -->
   <arg name="use_velctrl_only"          default="false" />
   <arg name="enable_flatness_ff"        default="false" />
-  <arg name="bias_compensation"         default="auto" />  <!--auto, on, off-->
+  <arg name="bias_compensation"         default="off" />  <!--auto, on, off-->
 
   <!-- Used for examples -->
-  <arg name="use_examples"              default="false"/>
+  <arg name="use_examples"              default="true"/>
   <arg name="example_number"            default="0" />
 
   <arg name="start_rosbag"              default="false" />

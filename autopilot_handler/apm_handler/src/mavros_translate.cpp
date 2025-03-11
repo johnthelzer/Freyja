@@ -33,7 +33,7 @@
 
 double THRUST_MAX = 1.0;
 double THRUST_MIN = 0.02;
-double THRUST_SCALER = 200.0;
+double THRUST_SCALER = 84.0;
 
 typedef mavros_msgs::AttitudeTarget AttiTarget;
 typedef freyja_msgs::CtrlCommand::ConstPtr CtrlInput;

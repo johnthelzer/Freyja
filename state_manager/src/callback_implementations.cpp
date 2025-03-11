@@ -427,6 +427,8 @@ void StateManager::payloadCallback( const sensor_msgs::JointState::ConstPtr &msg
   state_msg.state_vector[9] = w_total_x;//wn
   state_msg.state_vector[10] = w_total_y;//we
   state_msg.state_vector[11] = w_total_z;//wd*/
+  state_msg.state_vector[12] = roll_actual;
+  state_msg.state_vector[13] = pitch_actual;
   state_pub_.publish( state_msg );
 }
 void StateManager::cameraUpdatesCallback( const CameraOdom::ConstPtr &msg )

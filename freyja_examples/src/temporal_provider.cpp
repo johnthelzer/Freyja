@@ -37,7 +37,7 @@ TrajRef getHoverReference( const ros::Duration &cur_time )
   TrajRef ref_state;
   ref_state.pn = 0.0;
   ref_state.pe = 0.0;
-  ref_state.pd = -0.75;
+  ref_state.pd = -2.0;
   ref_state.vn = 0.0;
   ref_state.ve = 0.0;
   ref_state.vd = 0.0;
@@ -97,7 +97,7 @@ TrajRef getDefaultReference( const ros::Duration &cur_time )
   TrajRef ref_state;
   ref_state.pn = 0.5;
   ref_state.pe = 0.5;
-  ref_state.pd = -1.0;
+  ref_state.pd = -2.0;
   ref_state.vn = 0.0;
   ref_state.ve = 0.0;
   ref_state.vd = 0.0;

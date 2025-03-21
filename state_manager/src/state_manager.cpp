@@ -125,7 +125,7 @@ void StateManager::initPixhawkManager()
   maplock_srv_ = nh_.advertiseService( "/lock_arming_mapframe", 
                         &StateManager::maplockArmingHandler, this );
   //payload_sub_ = nh_.subscribe( "/theta_info", 1, &StateManager::payloadCallback, this );
-  payload_sub_ = nh_.subscribe( "/drone_with_payload/joint_states", 1, &StateManager::payloadCallback, this );
+  payload_sub_ = nh_.subscribe( "/iris_custom/joint_states", 1, &StateManager::payloadCallback, this );
   
   
   RAB_old << 1, 0, 0,

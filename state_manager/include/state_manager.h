@@ -32,7 +32,8 @@ typedef std_srvs::SetBool::Request BoolServReq;
 typedef std_srvs::SetBool::Response BoolServRsp;
 
 #define DEG2RAD(D) ((D)*3.1415326/180.0)
-#define F_PI 3.14153
+#define F_PI 3.14159
+#define pi 3.14159
 
 /* The full state vector is defined as:
   [ pn, pe, pd, vn, ve, vd, qn, qe, qd, wn, we, wd]
@@ -65,6 +66,7 @@ class StateManager
   float last_roll_, last_pitch_, last_yaw_;
   
   ros::Time lastUpdateTime_;
+  double time_since;
   
   /* Pick the source of information at launch time */
   std::string state_source_;
@@ -88,15 +90,26 @@ class StateManager
   
 
   /* global state variables */
-  float px_, py_, pz_, vx_, vy_, vz_;
-  float px_old_ = 0;
-  float py_old_ = 0;
-  float pz_old_ = 0;
+  double px_, py_, pz_, vx_, vy_, vz_;
+  double px_old_ = 0;
+  double py_old_ = 0;
+  double pz_old_ = 0;
   double roll_actual;
   double pitch_actual;
-  Eigen::Matrix3f RAB;
-  Eigen::Matrix3f RAB_old;  
-  Eigen::Matrix3f RAB_dot;
+  double yaw_actual;
+  double roll_actual_old;
+  double pitch_actual_old;
+  double yaw_actual_old;
+  double roll_dot_actual;
+  double pitch_dot_actual;
+  double yaw_dot_actual;
+
+  Eigen::Matrix<double, 3, 3> RAB;
+  Eigen::Matrix<double, 3, 3> RAB_yaw;
+  Eigen::Matrix<double, 3, 3> RAB_pitch;
+  Eigen::Matrix<double, 3, 3> RAB_roll;
+  Eigen::Matrix<double, 3, 3> RAB_old;  
+  Eigen::Matrix<double, 3, 3> RAB_dot;
 
   public:
     StateManager();

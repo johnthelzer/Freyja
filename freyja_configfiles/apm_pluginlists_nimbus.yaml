@@ -9,7 +9,7 @@ plugin_blacklist:
 - setpoint_accel
 - setpoint_velocity
 - setpoint_position
-- imu_pub
+#- imu_pub
 - local_position
 - manual_control
 - adsb

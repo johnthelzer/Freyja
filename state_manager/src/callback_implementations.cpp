@@ -234,15 +234,13 @@ void StateManager::mavrosCompassCallback( const std_msgs::Float64::ConstPtr &msg
 
 void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &msg )
 {
-  double time_since = (ros::Time::now() - lastUpdateTime_).toSec();
+  time_since = (ros::Time::now() - lastUpdateTime_).toSec();
   px_ = msg -> pose.pose.position.y;
   py_ = msg -> pose.pose.position.x;
   pz_ = -(msg -> pose.pose.position.z);
 
-  vx_ = (px_ - px_old_)/time_since;
-  vy_ = (py_ - py_old_)/time_since;
-  vz_ = (pz_ - pz_old_)/time_since;
   //my way of getting rotation matrix
+  /*
   float qw, qx, qy, qz;
   qw = msg -> pose.pose.orientation.w;
   qx = msg -> pose.pose.orientation.y;
@@ -257,14 +255,35 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   RAB << (1-2*(qy2 + qz2)), 2*(qx*qy - qz*qw), 2*(qx*qz + qy*qw),
       2*(qx*qy + qz*qw), (1-2*(qx2 + qz2)), 2*(qy*qz - qx*qw),
       2*(qx*qz - qy*qw), 2*(qy*qz + qx*qw), (1-2*(qx2 + qy2));
-  
+  */
   //original freyja way of getting roll and pitch
   tf::Quaternion q;
   tf::quaternionMsgToTF( msg->pose.pose.orientation, q);
   double yaw_placeholder;
-  tf::Matrix3x3(q).getRPY(roll_actual, pitch_actual, yaw_placeholder);
-  
-  RAB_dot = (RAB - RAB_old)/time_since;
+  tf::Matrix3x3(q).getRPY(roll_actual, pitch_actual, yaw_actual);
+  pitch_actual = -1*pitch_actual; //FLU orientation from mavros vs FRD orientation we want- actual pitch is in opposite direction
+  yaw_actual = -1*(yaw_actual-(pi/2));
+  //rotation matrices for drone
+  RAB_yaw << std::cos(yaw_actual), -1*std::sin(yaw_actual), 0,
+            std::sin(yaw_actual), std::cos(yaw_actual), 0,
+            0, 0, 1;
+  RAB_pitch << std::cos(pitch_actual), 0, std::sin(pitch_actual),
+            0, 1, 0,
+            -1*std::sin(pitch_actual), 0, std::cos(pitch_actual);
+  RAB_roll << 1, 0, 0,
+              0, std::cos(roll_actual), -1*std::sin(roll_actual),
+              0, std::sin(roll_actual), std::cos(roll_actual);
+  RAB = RAB_yaw*RAB_pitch*RAB_roll;
+
+  if(time_since > 0) //prevent infinite values
+  {
+    vx_ = 1/time_since*(px_ - px_old_);
+    vy_ = 1/time_since*(py_ - py_old_);
+    vz_ = 1/time_since*(pz_ - pz_old_);
+    roll_dot_actual = 1/time_since*(roll_actual - roll_actual_old);
+    pitch_dot_actual = 1/time_since*(pitch_actual - pitch_actual_old);
+    yaw_dot_actual = 1/time_since*(yaw_actual - yaw_actual_old);
+  }
   /* Update the current time this happened */
   lastUpdateTime_ = ros::Time::now();
 
@@ -273,49 +292,7 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   py_old_ = py_;
   pz_old_ = pz_;
   RAB_old = RAB;
-  
-  /* Callback for odometry direct from the Pixhawk.
-  Note that this is Pixhawk's best estimate of where it is in the world,
-  there is no need to filter it, only structure it to our format.
-  Likely topics:
-        /mavros/global_position/local --> does not zero at arming.
-        /mavros/local_position/local  --> zeros at arming, has IMU frame quirk.
-  
-  
-  static double pn, pe, pd, vn, ve, vd;
-  
-  // update containers anyway (needed for capturing arming location)
-  gps_odom_pn_ = msg -> pose.pose.position.y;
-  gps_odom_pe_ = msg -> pose.pose.position.x;
-  gps_odom_pd_ = -( msg -> pose.pose.position.z );
-  
-  if( !have_arming_origin_ )
-  {
-    ROS_INFO_THROTTLE( 5, "StateManager:: Waiting for arming .." );
-    return;
-  }
-  
-  // armed at this point
-  pn = gps_odom_pn_ + map_rtk_pn_ - arming_gps_pn_;
-  pe = gps_odom_pe_ + map_rtk_pe_ - arming_gps_pe_;
-  pd = gps_odom_pd_ + map_rtk_pd_ - arming_gps_pd_;
-  
-  vn = msg -> twist.twist.linear.y;
-  ve = msg -> twist.twist.linear.x;
-  vd = -( msg -> twist.twist.linear.z );
-  
-  static freyja_msgs::CurrentState state_msg;
-  state_msg.state_vector[0] = pn;
-  state_msg.state_vector[1] = pe;
-  state_msg.state_vector[2] = pd;
-  state_msg.state_vector[3] = vn;
-  state_msg.state_vector[4] = ve;
-  state_msg.state_vector[5] = vd;
-  state_msg.state_vector[8] = DEG2RAD( compass_yaw_ );
-  
-  state_msg.header.stamp = ros::Time::now();
-  state_pub_.publish( state_msg );
-  */
+   
 }
 
 
@@ -361,56 +338,49 @@ void StateManager::payloadCallback( const sensor_msgs::JointState::ConstPtr &msg
   float payload_roll_dot_rad = payload_roll_dot_deg*3.14159/180;
   float payload_pitch_dot_rad = payload_pitch_dot_deg*3.14159/180;
   */
-  float payload_roll_rad = msg -> position[0];
-  float payload_pitch_rad = msg -> position[1];
-  float payload_roll_dot_rad = msg -> velocity[0];
-  float payload_pitch_dot_rad = msg -> velocity[1];
-  Eigen::Matrix3f Rbc_pitch;
-  Eigen::Matrix3f Rbc_roll;
-  Eigen::Matrix3f Rbc_yaw;
-  /*Because of ENU to NED conversion, apply a yaw to the payload. In ENU convention, drone facing north is 90 degrees yaw.
-  When we convert to NED, this becomes -90 degrees yaw. However, we want yaw to be 0 degrees at north, not -90 degrees at north. 
-  Therefore, we add a 90 degree yaw to the payload to fix this problem.*/
-  float yaw_payload = 90*3.14159/180;
-  Rbc_pitch << std::cos(payload_pitch_rad), 0, std::sin(payload_pitch_rad),
+  //get roll and pitch angles and derivatives
+  double payload_roll_rad = msg -> position[0];
+  double payload_pitch_rad = msg -> position[1];
+  double payload_roll_dot_rad = msg -> velocity[0];
+  double payload_pitch_dot_rad = msg -> velocity[1];
+
+  Eigen::Matrix<double, 3, 1> i_;
+  Eigen::Matrix<double, 3, 1> j_;
+  Eigen::Matrix<double, 3, 1> k_;
+  i_ << 1, 0, 0;
+  j_ << 0, 1, 0;
+  k_ << 0, 0, 1;
+  //calculate angular velocity vector of drone
+  Eigen::Matrix<double, 3, 1>  w_drone_earth_A_;//angular velocity of drone relative to earth in map frame
+  w_drone_earth_A_ = roll_dot_actual*(RAB_yaw*RAB_pitch*i_) + pitch_dot_actual*(RAB_yaw*j_) + yaw_dot_actual*k_; 
+
+  //rotation matrices for payload angles
+  Eigen::Matrix<double, 3, 3> RBC_pitch;
+  Eigen::Matrix<double, 3, 3> RBC_roll;
+  RBC_pitch << std::cos(payload_pitch_rad), 0, std::sin(payload_pitch_rad),
               0, 1, 0,
               -1*std::sin(payload_pitch_rad), 0, std::cos(payload_pitch_rad);
-  Rbc_roll << 1, 0, 0,
+  RBC_roll << 1, 0, 0,
               0, std::cos(payload_roll_rad), -1*std::sin(payload_roll_rad),
               0, std::sin(payload_roll_rad), std::cos(payload_roll_rad);
-  Rbc_yaw << std::cos(yaw_payload), -1*std::sin(yaw_payload), 0,
-              std::sin(yaw_payload), std::cos(yaw_payload), 0,
-              0, 0, 1;
-  Eigen::Matrix3f RBC = Rbc_yaw*Rbc_pitch*Rbc_roll;//rotation matrix that transforms C frame (payload) to B frame (drone)
-  
-  float wp_x = payload_roll_dot_rad*std::cos(payload_pitch_rad);
-  float wp_y = payload_pitch_dot_rad;
-  float wp_z = -1*payload_roll_dot_rad*std::sin(payload_pitch_rad);
+  Eigen::Matrix<double, 3, 3> RBC = RBC_pitch*RBC_roll;//full rotation matrix that transforms C frame (payload) to B frame (drone)
+  //calculate angular velocity vector of payload
+  Eigen::Matrix<double, 3, 1> w_payload_drone_B_;//angular velocity of payload relative to drone in drone (B) frame
+  w_payload_drone_B_ = payload_roll_dot_rad*RBC_pitch*i_ + payload_pitch_dot_rad*j_;
+  Eigen::Matrix<double, 3, 1> w_payload_drone_A_;
+  w_payload_drone_A_ = RAB*w_payload_drone_B_;
   //calculate total angular velocity
-  Eigen::Matrix3f wd_skew; //skew symmetric matrix
-  wd_skew = RAB_dot*(RAB.transpose());
-  float wd_x, wd_y, wd_z;
-  wd_x = -1*wd_skew(1,2);
-  wd_y = wd_skew(0,2);
-  wd_z = -1*wd_skew(0,1);
-  Eigen::Vector3f wp_B; //payload angular velocity in B frame
-  wp_B(0,0) = wp_x;
-  wp_B(1,0) = wp_y;
-  wp_B(2,0) = wp_z;
-  Eigen::Vector3f wp_A;
-  wp_A = RAB*wp_B;
-  float w_total_x, w_total_y, w_total_z;
-  w_total_x = wd_x + wp_A(0,0);
-  w_total_y = wd_y + wp_A(1,0);
-  w_total_z = wd_z + wp_A(2,0);
+  Eigen::Matrix<double, 3, 1> w_total_A_;
+  w_total_A_ = w_payload_drone_A_ + w_drone_earth_A_;
+  double w_total_x = w_total_A_(0,0);
+  double w_total_y = w_total_A_(1,0);
+  double w_total_z = w_total_A_(2,0);
   //calculate q vector
-  Eigen::Vector3f q_(3,1);
-  Eigen::Vector3f k_(3,1);
-  k_ << 0, 0, 1;
+  Eigen::Matrix<double, 3, 1> q_;
   q_ = RAB*RBC*k_;
-  float qx_ = q_(0,0);
-  float qy_ = q_(1,0);
-  float qz_ = q_(2,0);
+  double qx_ = q_(0,0);
+  double qy_ = q_(1,0);
+  double qz_ = q_(2,0);
 
   static freyja_msgs::CurrentState state_msg;
   state_msg.header.stamp = ros::Time::now();
@@ -426,9 +396,11 @@ void StateManager::payloadCallback( const sensor_msgs::JointState::ConstPtr &msg
   state_msg.state_vector[8] = qz_ ;//qd
   state_msg.state_vector[9] = w_total_x;//wn
   state_msg.state_vector[10] = w_total_y;//we
-  state_msg.state_vector[11] = w_total_z;//wd*/
+  state_msg.state_vector[11] = w_total_z;//wd
   state_msg.state_vector[12] = roll_actual;
   state_msg.state_vector[13] = pitch_actual;
+  state_msg.state_vector[14] = yaw_actual;
+  state_msg.state_vector[15] = time_since;
   state_pub_.publish( state_msg );
 }
 void StateManager::cameraUpdatesCallback( const CameraOdom::ConstPtr &msg )

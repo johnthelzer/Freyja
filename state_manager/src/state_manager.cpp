@@ -76,6 +76,7 @@ StateManager::StateManager() : nh_(), priv_nh_("~")
   prev_ve_.resize( filter_len_ );
   prev_vd_.resize( filter_len_ );
   lastUpdateTime_ = ros::Time::now();
+  time_since = 0.02;
   have_location_fix_ = false;
 
   //variable initialization:
@@ -96,7 +97,7 @@ void StateManager::initViconManager()
   
   RAB_old << 1, 0, 0,
               0, 1, 0,
-              0, 0, 0; //initialize as identity matrix
+              0, 0, 1; //initialize as identity matrix
               
 }
 
@@ -127,7 +128,15 @@ void StateManager::initPixhawkManager()
   //payload_sub_ = nh_.subscribe( "/theta_info", 1, &StateManager::payloadCallback, this );
   payload_sub_ = nh_.subscribe( "/iris_custom/joint_states", 1, &StateManager::payloadCallback, this );
   
-  
+  roll_actual = 0;
+  pitch_actual = 0;
+  yaw_actual = 0;
+  roll_actual_old = 0;
+  pitch_actual_old = 0;
+  yaw_actual_old = 0;
+  roll_dot_actual = 0;
+  pitch_dot_actual = 0;
+  yaw_dot_actual = 0;
   RAB_old << 1, 0, 0,
               0, 1, 0,
               0, 0, 0; //initialize as identity matrix

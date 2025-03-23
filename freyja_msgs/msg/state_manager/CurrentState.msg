@@ -1,5 +1,5 @@
 # Full state generated for the controller:
-# [pn, pe, pd, vn, ve, vd, qx, qy, qz, wx, wy, wz, roll, pitch]
+# [pn, pe, pd, vn, ve, vd, qx, qy, qz, wx, wy, wz, roll, pitch, yaw, dt]
 Header header
-float64[14] state_vector
+float64[16] state_vector
 uint8       state_valid

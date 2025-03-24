@@ -237,8 +237,11 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   time_since = (ros::Time::now() - lastUpdateTime_).toSec();
   px_ = msg -> pose.pose.position.y;
   py_ = msg -> pose.pose.position.x;
-  pz_ = -(msg -> pose.pose.position.z);
+  pz_ = -1*(msg -> pose.pose.position.z);
 
+  vx_ = msg -> twist.twist.linear.y;
+  vy_ = msg -> twist.twist.linear.x;
+  vz_ = -1*(msg-> twist.twist.linear.z);
   //my way of getting rotation matrix
   /*
   float qw, qx, qy, qz;
@@ -277,9 +280,9 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
 
   if(time_since > 0) //prevent infinite values
   {
-    vx_ = 1/time_since*(px_ - px_old_);
-    vy_ = 1/time_since*(py_ - py_old_);
-    vz_ = 1/time_since*(pz_ - pz_old_);
+    //vx_ = 1/time_since*(px_ - px_old_);
+    //vy_ = 1/time_since*(py_ - py_old_);
+    //vz_ = 1/time_since*(pz_ - pz_old_);
     roll_dot_actual = 1/time_since*(roll_actual - roll_actual_old);
     pitch_dot_actual = 1/time_since*(pitch_actual - pitch_actual_old);
     yaw_dot_actual = 1/time_since*(yaw_actual - yaw_actual_old);
@@ -292,7 +295,27 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   py_old_ = py_;
   pz_old_ = pz_;
   RAB_old = RAB;
-   
+
+  static freyja_msgs::CurrentState state_msg;
+  state_msg.header.stamp = ros::Time::now();
+  //putting stuff in state vector
+  state_msg.state_vector[0] = px_; //pn
+  state_msg.state_vector[1] = py_; //pe
+  state_msg.state_vector[2] = pz_; //pd
+  state_msg.state_vector[3] = vx_; //vn
+  state_msg.state_vector[4] = vy_; //ve
+  state_msg.state_vector[5] = vz_; //vd
+  state_msg.state_vector[6] = qx_ ;//qn
+  state_msg.state_vector[7] = qy_ ;//qe
+  state_msg.state_vector[8] = qz_ ;//qd
+  state_msg.state_vector[9] = w_total_x;//wn
+  state_msg.state_vector[10] = w_total_y;//we
+  state_msg.state_vector[11] = w_total_z;//wd
+  state_msg.state_vector[12] = roll_actual;
+  state_msg.state_vector[13] = pitch_actual;
+  state_msg.state_vector[14] = yaw_actual;
+  state_msg.state_vector[15] = time_since;
+  state_pub_.publish( state_msg );
 }
 
 
@@ -372,36 +395,15 @@ void StateManager::payloadCallback( const sensor_msgs::JointState::ConstPtr &msg
   //calculate total angular velocity
   Eigen::Matrix<double, 3, 1> w_total_A_;
   w_total_A_ = w_payload_drone_A_ + w_drone_earth_A_;
-  double w_total_x = w_total_A_(0,0);
-  double w_total_y = w_total_A_(1,0);
-  double w_total_z = w_total_A_(2,0);
+  w_total_x = w_total_A_(0,0);
+  w_total_y = w_total_A_(1,0);
+  w_total_z = w_total_A_(2,0);
   //calculate q vector
   Eigen::Matrix<double, 3, 1> q_;
   q_ = RAB*RBC*k_;
-  double qx_ = q_(0,0);
-  double qy_ = q_(1,0);
-  double qz_ = q_(2,0);
-
-  static freyja_msgs::CurrentState state_msg;
-  state_msg.header.stamp = ros::Time::now();
-  //putting stuff in state vector
-  state_msg.state_vector[0] = px_; //pn
-  state_msg.state_vector[1] = py_; //pe
-  state_msg.state_vector[2] = pz_; //pd
-  state_msg.state_vector[3] = vx_; //vn
-  state_msg.state_vector[4] = vy_; //ve
-  state_msg.state_vector[5] = vz_; //vd
-  state_msg.state_vector[6] = qx_ ;//qn
-  state_msg.state_vector[7] = qy_ ;//qe
-  state_msg.state_vector[8] = qz_ ;//qd
-  state_msg.state_vector[9] = w_total_x;//wn
-  state_msg.state_vector[10] = w_total_y;//we
-  state_msg.state_vector[11] = w_total_z;//wd
-  state_msg.state_vector[12] = roll_actual;
-  state_msg.state_vector[13] = pitch_actual;
-  state_msg.state_vector[14] = yaw_actual;
-  state_msg.state_vector[15] = time_since;
-  state_pub_.publish( state_msg );
+  qx_ = q_(0,0);
+  qy_ = q_(1,0);
+  qz_ = q_(2,0);
 }
 void StateManager::cameraUpdatesCallback( const CameraOdom::ConstPtr &msg )
 {

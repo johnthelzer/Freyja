@@ -91,6 +91,8 @@ class StateManager
 
   /* global state variables */
   double px_, py_, pz_, vx_, vy_, vz_;
+  double qx_, qy_, qz_;
+  double w_total_x, w_total_y, w_total_z;
   double px_old_ = 0;
   double py_old_ = 0;
   double pz_old_ = 0;

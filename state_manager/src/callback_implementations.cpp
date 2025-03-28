@@ -363,9 +363,9 @@ void StateManager::payloadCallback( const sensor_msgs::JointState::ConstPtr &msg
   */
   //get roll and pitch angles and derivatives
   double payload_roll_rad = msg -> position[0];
-  double payload_pitch_rad = msg -> position[1];
+  double payload_pitch_rad = msg -> position[0];
   double payload_roll_dot_rad = msg -> velocity[0];
-  double payload_pitch_dot_rad = msg -> velocity[1];
+  double payload_pitch_dot_rad = msg -> velocity[0];
 
   Eigen::Matrix<double, 3, 1> i_;
   Eigen::Matrix<double, 3, 1> j_;

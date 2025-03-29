@@ -266,6 +266,8 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   tf::Matrix3x3(q).getRPY(roll_actual, pitch_actual, yaw_actual);
   pitch_actual = -1*pitch_actual; //FLU orientation from mavros vs FRD orientation we want- actual pitch is in opposite direction
   yaw_actual = -1*(yaw_actual-(pi/2));
+
+
   //rotation matrices for drone
   RAB_yaw << std::cos(yaw_actual), -1*std::sin(yaw_actual), 0,
             std::sin(yaw_actual), std::cos(yaw_actual), 0,
@@ -278,8 +280,21 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
               0, std::sin(roll_actual), std::cos(roll_actual);
   RAB = RAB_yaw*RAB_pitch*RAB_roll;
 
+
+
+  //angular velocity in drone frame
+  double qw, qx, qy, qz;
+  qw = msg->pose.pose.orientation.w;
+  qx = msg->pose.pose.orientation.y;
+  qy = msg->pose.pose.orientation.x;
+  qz = -1*(msg->pose.pose.orientation.z); //in NED
+
+
   if(time_since > 0) //prevent infinite values
   {
+    wx_b = 2/time_since*(qw_old*qx - qx_old*qw - qy_old*qz + qz_old*qy);
+    wy_b = 2/time_since*(qw_old*qy + qx_old*qz - qy_old*qw - qz_old*qx);
+    wz_b = 2/time_since*(qw_old*qz - qx_old*qy + qy_old*qx - qz_old*qw);
     //vx_ = 1/time_since*(px_ - px_old_);
     //vy_ = 1/time_since*(py_ - py_old_);
     //vz_ = 1/time_since*(pz_ - pz_old_);
@@ -287,15 +302,21 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
     pitch_dot_actual = 1/time_since*(pitch_actual - pitch_actual_old);
     yaw_dot_actual = 1/time_since*(yaw_actual - yaw_actual_old);
   }
-  /* Update the current time this happened */
-  lastUpdateTime_ = ros::Time::now();
 
+
+  w_drone_earth_B_ << wx_b, wy_b, wz_b; //in FRD drone frame (B)
   /*update old variables*/
   px_old_ = px_;
   py_old_ = py_;
   pz_old_ = pz_;
+  qw_old = qw;
+  qx_old = qx;
+  qy_old = qy;
+  qz_old = qz;
   RAB_old = RAB;
 
+  /* Update the current time this happened */
+  lastUpdateTime_ = ros::Time::now();
   static freyja_msgs::CurrentState state_msg;
   state_msg.header.stamp = ros::Time::now();
   //putting stuff in state vector
@@ -363,9 +384,9 @@ void StateManager::payloadCallback( const sensor_msgs::JointState::ConstPtr &msg
   */
   //get roll and pitch angles and derivatives
   double payload_roll_rad = msg -> position[0];
-  double payload_pitch_rad = msg -> position[0];
+  double payload_pitch_rad = msg -> position[1];
   double payload_roll_dot_rad = msg -> velocity[0];
-  double payload_pitch_dot_rad = msg -> velocity[0];
+  double payload_pitch_dot_rad = msg -> velocity[1];
 
   Eigen::Matrix<double, 3, 1> i_;
   Eigen::Matrix<double, 3, 1> j_;
@@ -375,7 +396,9 @@ void StateManager::payloadCallback( const sensor_msgs::JointState::ConstPtr &msg
   k_ << 0, 0, 1;
   //calculate angular velocity vector of drone
   Eigen::Matrix<double, 3, 1>  w_drone_earth_A_;//angular velocity of drone relative to earth in map frame
-  w_drone_earth_A_ = roll_dot_actual*(RAB_yaw*RAB_pitch*i_) + pitch_dot_actual*(RAB_yaw*j_) + yaw_dot_actual*k_; 
+  //w_drone_earth_A_ = roll_dot_actual*(RAB_yaw*RAB_pitch*i_) + pitch_dot_actual*(RAB_yaw*j_) + yaw_dot_actual*k_; 
+  w_drone_earth_A_ = RAB*w_drone_earth_B_;
+
 
   //rotation matrices for payload angles
   Eigen::Matrix<double, 3, 3> RBC_pitch;

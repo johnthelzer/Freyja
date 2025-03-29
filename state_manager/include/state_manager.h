@@ -112,6 +112,17 @@ class StateManager
   Eigen::Matrix<double, 3, 3> RAB_roll;
   Eigen::Matrix<double, 3, 3> RAB_old;  
   Eigen::Matrix<double, 3, 3> RAB_dot;
+  Eigen::Matrix<double, 3, 1> w_drone_earth_B_;
+
+  //quaternion terms!
+  double qw, qx, qy, qz;
+  double qw_old = 1.0;
+  double qx_old = 0.0;
+  double qy_old = 0.0;
+  double qz_old = 0.0;
+  double wx_b = 0;
+  double wy_b = 0;
+  double wz_b = 0;
 
   public:
     StateManager();

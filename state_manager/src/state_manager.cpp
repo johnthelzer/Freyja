@@ -113,6 +113,10 @@ void StateManager::initPixhawkManager()
 				                
   maplock_srv_ = nh_.advertiseService( "/lock_arming_mapframe", 
                         &StateManager::maplockArmingHandler, this );
+  qx_old = 0;
+  qy_old = 0;
+  qz_old = 0;
+  qw_old = 1;
 }
 
 void StateManager::initCameraManager()

@@ -33,7 +33,7 @@
 
 double THRUST_MAX = 1.0;
 double THRUST_MIN = 0.1;
-double THRUST_SCALER = 50;
+double THRUST_SCALER = 57.5;
 
 typedef mavros_msgs::AttitudeTarget AttiTarget;
 typedef freyja_msgs::CtrlCommand::ConstPtr CtrlInput;
@@ -60,10 +60,11 @@ void rpytCommandCallback( const CtrlInput &msg )
   along with target thrust. The bit mask contains additional information flags.
   @TODO: do something with the control bitmask if needed.
   */
-  double tgt_roll = msg -> roll;
-  double tgt_pitch = -( msg -> pitch );
-  double tgt_yawrate = msg -> yaw;
-  double tgt_thrust = msg -> thrust;
+  double t = ros::Time::now().toSec();
+  double tgt_roll = 0.175*sin(t);//msg -> roll;
+  double tgt_pitch = -0.175;//0.175*std::sin(t);//-( msg -> pitch );
+  double tgt_yawrate = 0.0;//msg -> yaw;
+  double tgt_thrust = std::fabs(21.35);//msg -> thrust; //2.11
   
   /* map angles into -1..+1 -- some systems might need this */
   //anglesToDouble( tgt_roll, tgt_pitch, tgt_yawrate );

@@ -187,7 +187,9 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
         /mavros/global_position/local --> does not zero at arming.
         /mavros/local_position/local  --> zeros at arming, has IMU frame quirk.
   */
-  
+  double time_since = (ros::Time::now() - lastUpdateTime_).toSec();
+  double pi = F_PI;
+
   static double pn, pe, pd, vn, ve, vd;
   
   // update containers anyway (needed for capturing arming location)
@@ -210,6 +212,55 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   ve = msg -> twist.twist.linear.x;
   vd = -( msg -> twist.twist.linear.z );
   
+  tf::Quaternion q;
+  tf::quaternionMsgToTF( msg->pose.pose.orientation, q);
+  double roll_actual, pitch_actual, yaw_actual;
+  tf::Matrix3x3(q).getRPY(roll_actual, pitch_actual, yaw_actual);
+  pitch_actual = -1*pitch_actual; //FLU orientation from mavros vs FRD orientation we want- actual pitch is in opposite direction
+  yaw_actual = -1*(yaw_actual-(pi/2));
+
+  //angular velocity
+  Eigen::Matrix<double, 3, 3> RAB_yaw;
+  Eigen::Matrix<double, 3, 3> RAB_pitch;
+  Eigen::Matrix<double, 3, 3> RAB_roll;
+  Eigen::Matrix<double, 3, 3> RAB;
+  RAB_yaw << std::cos(yaw_actual), -1*std::sin(yaw_actual), 0,
+            std::sin(yaw_actual), std::cos(yaw_actual), 0,
+            0, 0, 1;
+  RAB_pitch << std::cos(pitch_actual), 0, std::sin(pitch_actual),
+            0, 1, 0,
+            -1*std::sin(pitch_actual), 0, std::cos(pitch_actual);
+  RAB_roll << 1, 0, 0,
+              0, std::cos(roll_actual), -1*std::sin(roll_actual),
+              0, std::sin(roll_actual), std::cos(roll_actual);
+  RAB = RAB_yaw*RAB_pitch*RAB_roll;
+
+
+  double qw, qx, qy, qz;
+  qw = msg->pose.pose.orientation.w;
+  qx = msg->pose.pose.orientation.x;
+  qy = msg->pose.pose.orientation.y;
+  qz = 1*(msg->pose.pose.orientation.z); //in FLU (ENU)
+  double wx_b, wy_b, wz_b;
+
+  if(time_since > 0) //prevent infinite values
+  {
+    wx_b = 2/time_since*(qw_old*qx - qx_old*qw - qy_old*qz + qz_old*qy);
+    wy_b = 2/time_since*(qw_old*qy + qx_old*qz - qy_old*qw - qz_old*qx);
+    wz_b = 2/time_since*(qw_old*qz - qx_old*qy + qy_old*qx - qz_old*qw);
+  }
+  //in ENU
+  double wF_b = wx_b;//FRD for NED 
+  double wR_b = -wy_b;
+  double wD_b = -wz_b;
+
+
+  //update old variables
+  qx_old = qx;
+  qy_old = qy;
+  qz_old = qz;
+  qw_old = qw;
+  lastUpdateTime_ = ros::Time::now();
   static freyja_msgs::CurrentState state_msg;
   state_msg.state_vector[0] = pn;
   state_msg.state_vector[1] = pe;
@@ -217,7 +268,14 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   state_msg.state_vector[3] = vn;
   state_msg.state_vector[4] = ve;
   state_msg.state_vector[5] = vd;
-  state_msg.state_vector[8] = DEG2RAD( compass_yaw_ );
+  state_msg.state_vector[6] = roll_actual;
+  state_msg.state_vector[7] = pitch_actual;
+  state_msg.state_vector[8] = yaw_actual;
+  state_msg.state_vector[12] = wF_b;
+  state_msg.state_vector[13] = wR_b;
+  state_msg.state_vector[14] = wD_b;
+
+  //state_msg.state_vector[8] = DEG2RAD( compass_yaw_ );
   
   state_msg.header.stamp = ros::Time::now();
   state_pub_.publish( state_msg );

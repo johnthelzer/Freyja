@@ -18,9 +18,10 @@
 #include <std_msgs/Float64.h>
 #include <tf/tf.h>
 #include <std_srvs/SetBool.h>
-
+#include <eigen3/Eigen/Dense>
 #include <freyja_msgs/CurrentState.h>
 #include <freyja_msgs/AsctecData.h>
+#include <cmath>
 
 #include "freyja_filters.cpp"
 
@@ -62,6 +63,7 @@ class StateManager
   /* Book-keeping for velocities and rates */
   float last_pn_, last_pe_, last_pd_;
   float last_roll_, last_pitch_, last_yaw_;
+  double qx_old, qy_old, qz_old, qw_old;
   
   ros::Time lastUpdateTime_;
   

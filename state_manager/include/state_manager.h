@@ -24,6 +24,7 @@
 #include <freyja_msgs/CurrentState.h>
 #include <freyja_msgs/AsctecData.h>
 #include "freyja_filters.cpp"
+#include <cmath>
 
 typedef geometry_msgs::TransformStamped TFStamped;
 typedef geometry_msgs::TwistStamped TwStamped;
@@ -91,7 +92,7 @@ class StateManager
 
   /* global state variables */
   double px_, py_, pz_, vx_, vy_, vz_;
-  double qx_, qy_, qz_;
+  double qn_, qe_, qd_;
   double w_total_x, w_total_y, w_total_z;
   double px_old_ = 0;
   double py_old_ = 0;
@@ -105,6 +106,11 @@ class StateManager
   double roll_dot_actual;
   double pitch_dot_actual;
   double yaw_dot_actual;
+
+  double payload_roll_rad;
+  double payload_pitch_rad;
+  double payload_roll_dot_rad;
+  double payload_pitch_dot_rad;
 
   Eigen::Matrix<double, 3, 3> RAB;
   Eigen::Matrix<double, 3, 3> RAB_yaw;

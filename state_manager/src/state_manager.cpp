@@ -137,9 +137,21 @@ void StateManager::initPixhawkManager()
   roll_dot_actual = 0;
   pitch_dot_actual = 0;
   yaw_dot_actual = 0;
+
+  payload_roll_rad = 0;
+  payload_pitch_rad = 0;
+  payload_roll_dot_rad = 0;
+  payload_pitch_dot_rad = 0;
+
+
   RAB_old << 1, 0, 0,
               0, 1, 0,
               0, 0, 0; //initialize as identity matrix
+  qx_old = 0;
+  qy_old = 0;
+  qz_old = 0;
+  qw_old = 1;
+  
               
 }
 

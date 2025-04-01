@@ -238,10 +238,17 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   px_ = msg -> pose.pose.position.y;
   py_ = msg -> pose.pose.position.x;
   pz_ = -1*(msg -> pose.pose.position.z);
-
-  vx_ = msg -> twist.twist.linear.y;
-  vy_ = msg -> twist.twist.linear.x;
-  vz_ = -1*(msg-> twist.twist.linear.z);
+  
+  double vn_, ve_, vd_;
+  vn_ = msg -> twist.twist.linear.y;
+  ve_ = msg -> twist.twist.linear.x;
+  vd_ = -1*(msg-> twist.twist.linear.z); //velocity in body-frame?
+  /*
+  Eigen::Matrix<double, 3, 1> v_b;
+  v_b << vx_, vy_, vz_;
+  Eigen::Matrix<double, 3, 1> v_a;
+  double vn_, ve_, vd_;*/
+  
   //my way of getting rotation matrix
   /*
   float qw, qx, qy, qz;
@@ -282,13 +289,25 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
 
 
 
-  //angular velocity in drone frame
   double qw, qx, qy, qz;
   qw = msg->pose.pose.orientation.w;
-  qx = msg->pose.pose.orientation.y;
-  qy = msg->pose.pose.orientation.x;
-  qz = -1*(msg->pose.pose.orientation.z); //in NED
+  qx = msg->pose.pose.orientation.x;
+  qy = msg->pose.pose.orientation.y;
+  qz = 1*(msg->pose.pose.orientation.z); //in FLU (ENU)
+  double wx_b, wy_b, wz_b;
 
+  if(time_since > 0) //prevent infinite values
+  {
+    wx_b = 2/time_since*(qw_old*qx - qx_old*qw - qy_old*qz + qz_old*qy);
+    wy_b = 2/time_since*(qw_old*qy + qx_old*qz - qy_old*qw - qz_old*qx);
+    wz_b = 2/time_since*(qw_old*qz - qx_old*qy + qy_old*qx - qz_old*qw);
+  }
+  //in ENU
+  double wF_b = wx_b;//FRD for NED 
+  double wR_b = -wy_b;
+  double wD_b = -wz_b;
+
+  /*
 
   if(time_since > 0) //prevent infinite values
   {
@@ -302,33 +321,79 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
     pitch_dot_actual = 1/time_since*(pitch_actual - pitch_actual_old);
     yaw_dot_actual = 1/time_since*(yaw_actual - yaw_actual_old);
   }
+  */
+  w_drone_earth_B_ << wF_b, wR_b, wD_b; //in FRD drone frame (B)
+  
+  /*payload calculations*/
 
+  Eigen::Matrix<double, 3, 1> i_;
+  Eigen::Matrix<double, 3, 1> j_;
+  Eigen::Matrix<double, 3, 1> k_;
+  i_ << 1, 0, 0;
+  j_ << 0, 1, 0;
+  k_ << 0, 0, 1;
+  //calculate angular velocity vector of drone
+  Eigen::Matrix<double, 3, 1>  w_drone_earth_A_;//angular velocity of drone relative to earth in map frame
+  //w_drone_earth_A_ = roll_dot_actual*(RAB_yaw*RAB_pitch*i_) + pitch_dot_actual*(RAB_yaw*j_) + yaw_dot_actual*k_; 
+  w_drone_earth_A_ = RAB*w_drone_earth_B_;
+  //rotation matrices for payload angles
+  Eigen::Matrix<double, 3, 3> RBC_pitch;
+  Eigen::Matrix<double, 3, 3> RBC_roll;
+  RBC_pitch << std::cos(payload_pitch_rad), 0, std::sin(payload_pitch_rad),
+              0, 1, 0,
+              -1*std::sin(payload_pitch_rad), 0, std::cos(payload_pitch_rad);
+  RBC_roll << 1, 0, 0,
+              0, std::cos(payload_roll_rad), -1*std::sin(payload_roll_rad),
+              0, std::sin(payload_roll_rad), std::cos(payload_roll_rad);
+  Eigen::Matrix<double, 3, 3> RBC = RBC_pitch*RBC_roll;//full rotation matrix that transforms C frame (payload) to B frame (drone)
+  //calculate angular velocity vector of payload
+  Eigen::Matrix<double, 3, 1> w_payload_drone_B_;//angular velocity of payload relative to drone in drone (B) frame
+  w_payload_drone_B_ = payload_roll_dot_rad*RBC_pitch*i_ + payload_pitch_dot_rad*j_;
+  Eigen::Matrix<double, 3, 1> w_payload_drone_A_;
+  w_payload_drone_A_ = RAB*w_payload_drone_B_;
+  //calculate total angular velocity
+  Eigen::Matrix<double, 3, 1> w_total_A_;
+  w_total_A_ = w_payload_drone_A_ + w_drone_earth_A_;
+  w_total_x = w_total_A_(0,0);
+  w_total_y = w_total_A_(1,0);
+  w_total_z = w_total_A_(2,0);
+  //calculate q vector
+  Eigen::Matrix<double, 3, 1> q_; //unit vector
+  q_ = RAB*RBC*k_;
+  qn_ = q_(0,0);
+  qe_ = q_(1,0);
+  qd_ = q_(2,0);
 
-  w_drone_earth_B_ << wx_b, wy_b, wz_b; //in FRD drone frame (B)
+  /*
+  v_a = RAB*v_b;
+  vn_ = v_a(0,0);
+  ve_ = v_a(1,0);
+  vd_ = v_a(2,0);*/
+
+  /* Update the current time this happened */
+  lastUpdateTime_ = ros::Time::now();
   /*update old variables*/
   px_old_ = px_;
   py_old_ = py_;
   pz_old_ = pz_;
-  qw_old = qw;
-  qx_old = qx;
-  qy_old = qy;
-  qz_old = qz;
+  qw_old = qw; //quaternion
+  qx_old = qx; //quaternion
+  qy_old = qy; //quaternion
+  qz_old = qz; //quaternion
   RAB_old = RAB;
-
-  /* Update the current time this happened */
-  lastUpdateTime_ = ros::Time::now();
+  /*create message*/
   static freyja_msgs::CurrentState state_msg;
   state_msg.header.stamp = ros::Time::now();
   //putting stuff in state vector
   state_msg.state_vector[0] = px_; //pn
   state_msg.state_vector[1] = py_; //pe
   state_msg.state_vector[2] = pz_; //pd
-  state_msg.state_vector[3] = vx_; //vn
-  state_msg.state_vector[4] = vy_; //ve
-  state_msg.state_vector[5] = vz_; //vd
-  state_msg.state_vector[6] = qx_ ;//qn
-  state_msg.state_vector[7] = qy_ ;//qe
-  state_msg.state_vector[8] = qz_ ;//qd
+  state_msg.state_vector[3] = vn_; //vn
+  state_msg.state_vector[4] = ve_; //ve
+  state_msg.state_vector[5] = vd_; //vd
+  state_msg.state_vector[6] = qn_ ;//qn
+  state_msg.state_vector[7] = qe_ ;//qe
+  state_msg.state_vector[8] = qd_ ;//qd
   state_msg.state_vector[9] = w_total_x;//wn
   state_msg.state_vector[10] = w_total_y;//we
   state_msg.state_vector[11] = w_total_z;//wd
@@ -383,50 +448,11 @@ void StateManager::payloadCallback( const sensor_msgs::JointState::ConstPtr &msg
   float payload_pitch_dot_rad = payload_pitch_dot_deg*3.14159/180;
   */
   //get roll and pitch angles and derivatives
-  double payload_roll_rad = msg -> position[0];
-  double payload_pitch_rad = msg -> position[1];
-  double payload_roll_dot_rad = msg -> velocity[0];
-  double payload_pitch_dot_rad = msg -> velocity[1];
-
-  Eigen::Matrix<double, 3, 1> i_;
-  Eigen::Matrix<double, 3, 1> j_;
-  Eigen::Matrix<double, 3, 1> k_;
-  i_ << 1, 0, 0;
-  j_ << 0, 1, 0;
-  k_ << 0, 0, 1;
-  //calculate angular velocity vector of drone
-  Eigen::Matrix<double, 3, 1>  w_drone_earth_A_;//angular velocity of drone relative to earth in map frame
-  //w_drone_earth_A_ = roll_dot_actual*(RAB_yaw*RAB_pitch*i_) + pitch_dot_actual*(RAB_yaw*j_) + yaw_dot_actual*k_; 
-  w_drone_earth_A_ = RAB*w_drone_earth_B_;
-
-
-  //rotation matrices for payload angles
-  Eigen::Matrix<double, 3, 3> RBC_pitch;
-  Eigen::Matrix<double, 3, 3> RBC_roll;
-  RBC_pitch << std::cos(payload_pitch_rad), 0, std::sin(payload_pitch_rad),
-              0, 1, 0,
-              -1*std::sin(payload_pitch_rad), 0, std::cos(payload_pitch_rad);
-  RBC_roll << 1, 0, 0,
-              0, std::cos(payload_roll_rad), -1*std::sin(payload_roll_rad),
-              0, std::sin(payload_roll_rad), std::cos(payload_roll_rad);
-  Eigen::Matrix<double, 3, 3> RBC = RBC_pitch*RBC_roll;//full rotation matrix that transforms C frame (payload) to B frame (drone)
-  //calculate angular velocity vector of payload
-  Eigen::Matrix<double, 3, 1> w_payload_drone_B_;//angular velocity of payload relative to drone in drone (B) frame
-  w_payload_drone_B_ = payload_roll_dot_rad*RBC_pitch*i_ + payload_pitch_dot_rad*j_;
-  Eigen::Matrix<double, 3, 1> w_payload_drone_A_;
-  w_payload_drone_A_ = RAB*w_payload_drone_B_;
-  //calculate total angular velocity
-  Eigen::Matrix<double, 3, 1> w_total_A_;
-  w_total_A_ = w_payload_drone_A_ + w_drone_earth_A_;
-  w_total_x = w_total_A_(0,0);
-  w_total_y = w_total_A_(1,0);
-  w_total_z = w_total_A_(2,0);
-  //calculate q vector
-  Eigen::Matrix<double, 3, 1> q_;
-  q_ = RAB*RBC*k_;
-  qx_ = q_(0,0);
-  qy_ = q_(1,0);
-  qz_ = q_(2,0);
+  payload_roll_rad = msg -> position[0];
+  payload_pitch_rad = msg -> position[1];
+  payload_roll_dot_rad = msg -> velocity[0];
+  payload_pitch_dot_rad = msg -> velocity[1];
+  
 }
 void StateManager::cameraUpdatesCallback( const CameraOdom::ConstPtr &msg )
 {

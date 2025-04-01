@@ -13,7 +13,7 @@
 
   <!-- use "device:baudrate" for apm, "device" for asctec -->
   <arg name="comm_port"                 default="udp://127.0.0.1:14551@14555"/>
-  <arg name="total_mass"                default="1.9"/>
+  <arg name="total_mass"                default="2.11"/>
   <arg name="thrust_scaler" 		        default="58"/>
 
   <!-- launch a handler for discrete waypoints -->

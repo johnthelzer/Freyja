@@ -35,8 +35,8 @@ void timeResetCallback( const std_msgs::UInt8::ConstPtr &msg )
 TrajRef getHoverReference( const ros::Duration &cur_time )
 {
   TrajRef ref_state;
-  ref_state.pn = 1.0;
-  ref_state.pe = 1.0;
+  ref_state.pn = 0.0;
+  ref_state.pe = 0.0;
   ref_state.pd = -2.0;
   ref_state.vn = 0.0;
   ref_state.ve = 0.0;

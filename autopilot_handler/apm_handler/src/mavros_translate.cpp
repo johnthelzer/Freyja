@@ -61,10 +61,10 @@ void rpytCommandCallback( const CtrlInput &msg )
   @TODO: do something with the control bitmask if needed.
   */
   double t = ros::Time::now().toSec();
-  double tgt_roll = 0.175*sin(t);//msg -> roll;
-  double tgt_pitch = -0.175;//0.175*std::sin(t);//-( msg -> pitch );
-  double tgt_yawrate = 0.0;//msg -> yaw;
-  double tgt_thrust = std::fabs(21.35);//msg -> thrust; //2.11
+  double tgt_roll = msg -> roll;
+  double tgt_pitch = -( msg -> pitch );
+  double tgt_yawrate = msg -> yaw;
+  double tgt_thrust = msg -> thrust; //2.11
   
   /* map angles into -1..+1 -- some systems might need this */
   //anglesToDouble( tgt_roll, tgt_pitch, tgt_yawrate );

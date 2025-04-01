@@ -240,9 +240,11 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   pz_ = -1*(msg -> pose.pose.position.z);
   
   double vn_, ve_, vd_;
+  
   vn_ = msg -> twist.twist.linear.y;
   ve_ = msg -> twist.twist.linear.x;
-  vd_ = -1*(msg-> twist.twist.linear.z); //velocity in body-frame?
+  vd_ = (msg-> twist.twist.linear.z); //velocity in body-frame?
+  
   /*
   Eigen::Matrix<double, 3, 1> v_b;
   v_b << vx_, vy_, vz_;
@@ -296,16 +298,13 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   qz = 1*(msg->pose.pose.orientation.z); //in FLU (ENU)
   double wx_b, wy_b, wz_b;
 
-  if(time_since > 0) //prevent infinite values
-  {
-    wx_b = 2/time_since*(qw_old*qx - qx_old*qw - qy_old*qz + qz_old*qy);
-    wy_b = 2/time_since*(qw_old*qy + qx_old*qz - qy_old*qw - qz_old*qx);
-    wz_b = 2/time_since*(qw_old*qz - qx_old*qy + qy_old*qx - qz_old*qw);
-  }
+  
   //in ENU
+  /*
   double wF_b = wx_b;//FRD for NED 
   double wR_b = -wy_b;
   double wD_b = -wz_b;
+  */
 
   /*
 
@@ -322,7 +321,8 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
     yaw_dot_actual = 1/time_since*(yaw_actual - yaw_actual_old);
   }
   */
-  w_drone_earth_B_ << wF_b, wR_b, wD_b; //in FRD drone frame (B)
+  
+//w_drone_earth_B_ << wF_b, wR_b, wD_b; //in FRD drone frame (B)
   
   /*payload calculations*/
 
@@ -332,11 +332,13 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   i_ << 1, 0, 0;
   j_ << 0, 1, 0;
   k_ << 0, 0, 1;
+  /*
   //calculate angular velocity vector of drone
   Eigen::Matrix<double, 3, 1>  w_drone_earth_A_;//angular velocity of drone relative to earth in map frame
   //w_drone_earth_A_ = roll_dot_actual*(RAB_yaw*RAB_pitch*i_) + pitch_dot_actual*(RAB_yaw*j_) + yaw_dot_actual*k_; 
   w_drone_earth_A_ = RAB*w_drone_earth_B_;
   //rotation matrices for payload angles
+  */
   Eigen::Matrix<double, 3, 3> RBC_pitch;
   Eigen::Matrix<double, 3, 3> RBC_roll;
   RBC_pitch << std::cos(payload_pitch_rad), 0, std::sin(payload_pitch_rad),
@@ -347,6 +349,7 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
               0, std::sin(payload_roll_rad), std::cos(payload_roll_rad);
   Eigen::Matrix<double, 3, 3> RBC = RBC_pitch*RBC_roll;//full rotation matrix that transforms C frame (payload) to B frame (drone)
   //calculate angular velocity vector of payload
+  /*
   Eigen::Matrix<double, 3, 1> w_payload_drone_B_;//angular velocity of payload relative to drone in drone (B) frame
   w_payload_drone_B_ = payload_roll_dot_rad*RBC_pitch*i_ + payload_pitch_dot_rad*j_;
   Eigen::Matrix<double, 3, 1> w_payload_drone_A_;
@@ -354,15 +357,45 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   //calculate total angular velocity
   Eigen::Matrix<double, 3, 1> w_total_A_;
   w_total_A_ = w_payload_drone_A_ + w_drone_earth_A_;
+  /*
   w_total_x = w_total_A_(0,0);
   w_total_y = w_total_A_(1,0);
   w_total_z = w_total_A_(2,0);
+  */
+
+  
   //calculate q vector
   Eigen::Matrix<double, 3, 1> q_; //unit vector
   q_ = RAB*RBC*k_;
   qn_ = q_(0,0);
   qe_ = q_(1,0);
   qd_ = q_(2,0);
+
+  double norm_q_squared = std::pow(qn_,2) + std::pow(qe_,2) + std::pow(qd_,2);
+
+  w_total_x = (-1*qe_dot*qd_ + qd_dot*qe_)/norm_q_squared;
+  w_total_y = (qn_dot*qd_ - qd_dot*qn_)/norm_q_squared;
+  w_total_z = (-1*qn_dot*qe_ + qe_dot*qn_)/norm_q_squared;
+
+
+  uint8_t state_valid;
+  if(time_since > 0) //prevent infinite values
+  {
+    //wx_b = 2/time_since*(qw_old*qx - qx_old*qw - qy_old*qz + qz_old*qy);
+    //wy_b = 2/time_since*(qw_old*qy + qx_old*qz - qy_old*qw - qz_old*qx);
+    //wz_b = 2/time_since*(qw_old*qz - qx_old*qy + qy_old*qx - qz_old*qw);
+    qn_dot = (qn_ - qn_old)/time_since;
+    qe_dot = (qe_ - qe_old)/time_since;
+    qd_dot = (qd_ - qd_old)/time_since;
+    //vn_ = (px_ - px_old_)/time_since;
+    //ve_ = (py_ - py_old_)/time_since;
+    //vd_ = (pz_ - pz_old_)/time_since;
+    state_valid = 1;
+  }
+  else
+  {
+    state_valid = 0;
+  }
 
   /*
   v_a = RAB*v_b;
@@ -371,7 +404,7 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   vd_ = v_a(2,0);*/
 
   /* Update the current time this happened */
-  lastUpdateTime_ = ros::Time::now();
+  
   /*update old variables*/
   px_old_ = px_;
   py_old_ = py_;
@@ -381,6 +414,9 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   qy_old = qy; //quaternion
   qz_old = qz; //quaternion
   RAB_old = RAB;
+  qn_old = qn_; //q vector
+  qe_old = qe_;
+  qd_old = qd_;
   /*create message*/
   static freyja_msgs::CurrentState state_msg;
   state_msg.header.stamp = ros::Time::now();
@@ -400,8 +436,13 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   state_msg.state_vector[12] = roll_actual;
   state_msg.state_vector[13] = pitch_actual;
   state_msg.state_vector[14] = yaw_actual;
-  state_msg.state_vector[15] = time_since;
+  state_msg.state_vector[15] = qn_dot;
+  state_msg.state_vector[16] = qe_dot;
+  state_msg.state_vector[17] = qd_dot;
+  state_msg.state_vector[18] = time_since;
+  state_msg.state_valid = state_valid;
   state_pub_.publish( state_msg );
+  lastUpdateTime_ = ros::Time::now();
 }
 
 

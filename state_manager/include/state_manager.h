@@ -94,9 +94,17 @@ class StateManager
   double px_, py_, pz_, vx_, vy_, vz_;
   double qn_, qe_, qd_;
   double w_total_x, w_total_y, w_total_z;
-  double px_old_ = 0;
-  double py_old_ = 0;
-  double pz_old_ = 0;
+  double px_old_;
+  double py_old_;
+  double pz_old_;
+  double qn_old;
+  double qe_old;
+  double qd_old;
+
+  double qn_dot;
+  double qe_dot;
+  double qd_dot;
+
   double roll_actual;
   double pitch_actual;
   double yaw_actual;

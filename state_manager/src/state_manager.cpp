@@ -128,6 +128,11 @@ void StateManager::initPixhawkManager()
   //payload_sub_ = nh_.subscribe( "/theta_info", 1, &StateManager::payloadCallback, this );
   payload_sub_ = nh_.subscribe( "/iris_custom/joint_states", 1, &StateManager::payloadCallback, this );
   
+
+  px_old_ = 0;
+  py_old_ = 0;
+  pz_old_ = 0;
+
   roll_actual = 0;
   pitch_actual = 0;
   yaw_actual = 0;
@@ -151,6 +156,16 @@ void StateManager::initPixhawkManager()
   qy_old = 0;
   qz_old = 0;
   qw_old = 1;
+
+  /*
+  qn_dot = 0;
+  qe_dot = 0;
+  qd_dot = 0;
+  */
+
+  qn_old = 0;
+  qe_old = 0;
+  qd_old = 0;
   
               
 }

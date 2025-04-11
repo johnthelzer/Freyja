@@ -156,7 +156,9 @@ TrajectoryGenerator::TrajectoryGenerator() : nh_(), priv_nh_("~")
 void TrajectoryGenerator::currentStateCallback( const freyja_msgs::CurrentState::ConstPtr &msg )
 {
   /* make current_state available locally */
+  std::vector<double> sv_data = {msg->pn, msg->pe, msg->pd, msg->vn, msg->ve, msg->vd};//, msg->roll, msg->pitch, msg->yaw};
   current_state_.head<6>() = Eigen::Map<const PosVelNED>( msg->state_vector.data() );
+
 }
 
 void TrajectoryGenerator::waypointCallback( const freyja_msgs::WaypointTarget::ConstPtr &msg )

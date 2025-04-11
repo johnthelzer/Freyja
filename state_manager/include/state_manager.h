@@ -14,13 +14,17 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include <sensor_msgs/NavSatFix.h>
+#include <sensor_msgs/JointState.h>
+#include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <tf/tf.h>
 #include <std_srvs/SetBool.h>
 #include <eigen3/Eigen/Dense>
 #include <freyja_msgs/CurrentState.h>
 #include <freyja_msgs/AsctecData.h>
+#include "freyja_filters.cpp"
 #include <cmath>
 
 #include "freyja_filters.cpp"
@@ -32,7 +36,8 @@ typedef std_srvs::SetBool::Request BoolServReq;
 typedef std_srvs::SetBool::Response BoolServRsp;
 
 #define DEG2RAD(D) ((D)*3.1415326/180.0)
-#define F_PI 3.14153
+#define F_PI 3.14159
+#define pi 3.14159
 
 /* The full state vector is defined as:
   [ pn, pe, pd, vn, ve, vd, roll, pitch, yaw, roll_rate_, pitch_rate_, yaw_rate_ ]
@@ -63,7 +68,8 @@ class StateManager
   /* Book-keeping for velocities and rates */
   float last_pn_, last_pe_, last_pd_;
   float last_roll_, last_pitch_, last_yaw_;
-  double qx_old, qy_old, qz_old, qw_old;
+  double wx_d, wy_d, wz_d; //angular velocities of drone
+  double roll_p, pitch_p, rolldot_p, pitchdot_p;
   
   ros::Time lastUpdateTime_;
   
@@ -113,11 +119,14 @@ class StateManager
     ros::Subscriber compass_sub_;
     ros::Subscriber mavros_gpsodom_sub_;
     ros::Subscriber mavros_rtk_sub_;
+    ros::Subscriber imu_sub;
+    ros::Subscriber payload_sub;
     void mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr & );
     void mavrosCompassCallback( const std_msgs::Float64::ConstPtr & );
     void mavrosRtkBaselineCallback( const geometry_msgs::Vector3::ConstPtr & );
-    
+    void imuCallback(const sensor_msgs::Imu::ConstPtr &);
     void mavrosGpsRawCallback( const sensor_msgs::NavSatFix::ConstPtr & );
+    void payloadCallback(const std_msgs::Float32MultiArray::ConstPtr &);
     
     /* handlers for locking map frame origins */
     inline void lockArmingGps( bool _lock = true )

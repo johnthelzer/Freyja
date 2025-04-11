@@ -82,10 +82,11 @@ void LQRController::stateCallback( const freyja_msgs::CurrentState::ConstPtr &ms
   //std::vector<double> sv(13);
   //for( int i=0; i<13; i++ )
   //  sv[i] = msg->state_vector[i];
-  const double *msgptr = msg -> state_vector.data();
-  std::vector<double> sv( msgptr, msgptr+13  );
+  //const double *msgptr = msg -> state_vector.data();
+  std::vector<double> sv = {msg->pn, msg->pe, msg->pd, msg->vn, msg->ve, msg->vd, msg->roll, msg->pitch, msg->yaw};
+  //std::vector<double> sv( msgptr, msgptr+13  );
 
-  float yaw = sv[8];
+  float yaw = msg -> yaw;
   rot_yaw_ << std::cos(yaw), std::sin(yaw), 0,
             -std::sin(yaw), std::cos(yaw), 0,
              0, 0, 1;

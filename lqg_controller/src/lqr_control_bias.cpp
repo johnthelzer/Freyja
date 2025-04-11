@@ -151,12 +151,14 @@ void LQRController::stateCallback( const freyja_msgs::CurrentState::ConstPtr &ms
   static Eigen::Matrix<double, 7, 1> current_state;
   static Eigen::Matrix<double, 7, 1> state_err;
 
-  float yaw = msg->state_vector[8];
+  //float yaw = msg->state_vector[8];
+  float yaw = msg->yaw;
   rot_yaw_ << std::cos(yaw), std::sin(yaw), 0,
              -std::sin(yaw), std::cos(yaw), 0,
               0, 0, 1;
              
   /* state is the first 6 elements, and yaw */
+  std::vector<double> cs  = {msg->pn, msg->pe, msg->pd, msg->vn, msg->ve, msg->vd, msg->roll, msg->pitch, msg->yaw};
   current_state << Eigen::Map<const PosVelNED>( msg->state_vector.data() ),
                    double(yaw);
 

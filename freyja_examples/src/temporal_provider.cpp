@@ -41,7 +41,7 @@ TrajRef getHoverReference( const ros::Duration &cur_time )
   ref_state.vn = 0.0;
   ref_state.ve = 0.0;
   ref_state.vd = 0.0;
-  ref_state.yaw = DEG2RAD(0.0);
+  ref_state.yaw = DEG2RAD(90.0);
   ref_state.an = 0.0;
   ref_state.ae = 0.0;
   ref_state.ad = 0.0;

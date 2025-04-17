@@ -32,8 +32,20 @@
 #define ROS_NODE_NAME "mavros_translator"
 
 double THRUST_MAX = 1.0;
-double THRUST_MIN = 0.1;
-double THRUST_SCALER = 57.5;
+double THRUST_MIN = 0.01;
+double THRUST_SCALER = 110;
+
+//thrust curve parameters:
+int num_rotors = 6;
+double mot_thst_expo = 0.47;//between 0 and 1, not including 0
+double mot_spin_min = 0.16;
+double mot_spin_max = 0.88;
+double Tspin_min = 0.041792; //thrust at mot_spin_min
+double Tspin_max = 1.228356; //thrust at mot_spin_max
+double pwm_min = 1000;
+double pwm_max = 2000;
+double pwm_spin_min = 1160;
+double pwm_spin_max = 1880;
 
 typedef mavros_msgs::AttitudeTarget AttiTarget;
 typedef freyja_msgs::CtrlCommand::ConstPtr CtrlInput;
@@ -60,25 +72,30 @@ void rpytCommandCallback( const CtrlInput &msg )
   along with target thrust. The bit mask contains additional information flags.
   @TODO: do something with the control bitmask if needed.
   */
+  
   double t = ros::Time::now().toSec();
-  double tgt_roll = msg -> roll;
-  double tgt_pitch = -( msg -> pitch );
+  double tgt_roll = 0;//msg -> roll;
+  double tgt_pitch = 0;//-( msg -> pitch );
   double tgt_yawrate = msg -> yaw;
-  double tgt_thrust = msg -> thrust; //2.11
+  double tgt_thrust = 3.132*9.81;//msg -> thrust; //2.324
+  
   
   /* map angles into -1..+1 -- some systems might need this */
   //anglesToDouble( tgt_roll, tgt_pitch, tgt_yawrate );
   
   /* map thrust into 0..1 */
+  
   thrustToDouble( tgt_thrust );
   
   /* clip to hard limits */
+  
   tgt_pitch = std::max( -1.0, std::min( 1.0, tgt_pitch ) );
   tgt_roll = std::max( -1.0, std::min( 1.0, tgt_roll ) );
   tgt_yawrate = std::max( -45.0, std::min( 45.0, tgt_yawrate ) );
   tgt_thrust = std::max( THRUST_MIN, std::min( THRUST_MAX, tgt_thrust ) );
   
   /* call mavros helper function */
+  
   sendToMavros( tgt_pitch, tgt_roll, tgt_yawrate, tgt_thrust );
 }
 

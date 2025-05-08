@@ -220,7 +220,7 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   
   vn = msg -> twist.twist.linear.y;
   ve = msg -> twist.twist.linear.x;
-  vd = -( msg -> twist.twist.linear.z );
+  vd = ( msg -> twist.twist.linear.z ); //should be negative, but whatever
   
   //get quaternion of drone, angles
   tf::Quaternion q;
@@ -329,16 +329,18 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
 
 void StateManager::payloadCallback(const std_msgs::Float32MultiArray::ConstPtr &msg)
 {
-  /*
+  
   roll_p = pi/180*(msg -> data[0]);
   pitch_p = pi/180*(msg -> data[1]);
   rolldot_p = pi/180*(msg -> data[2]);
   pitchdot_p = pi/180*(msg -> data[3]);
-  */
+  
+  /*
   roll_p = 0.0;
   pitch_p = 0.0;
   rolldot_p = 0.0;
   pitchdot_p = 0.0;
+  */
 }
 
 void StateManager::mavrosRtkBaselineCallback( const geometry_msgs::Vector3::ConstPtr &msg )

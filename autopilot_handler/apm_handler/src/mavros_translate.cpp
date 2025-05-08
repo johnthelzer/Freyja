@@ -33,7 +33,7 @@
 
 double THRUST_MAX = 1.0;
 double THRUST_MIN = 0.01;
-double THRUST_SCALER = 110;
+double THRUST_SCALER = 92;
 
 //thrust curve parameters:
 int num_rotors = 6;
@@ -74,10 +74,10 @@ void rpytCommandCallback( const CtrlInput &msg )
   */
   
   double t = ros::Time::now().toSec();
-  double tgt_roll = 0;//msg -> roll;
-  double tgt_pitch = 0;//-( msg -> pitch );
+  double tgt_roll = msg -> roll;
+  double tgt_pitch = -( msg -> pitch );
   double tgt_yawrate = msg -> yaw;
-  double tgt_thrust = 3.132*9.81;//msg -> thrust; //2.324
+  double tgt_thrust = msg -> thrust; //2.324
   
   
   /* map angles into -1..+1 -- some systems might need this */

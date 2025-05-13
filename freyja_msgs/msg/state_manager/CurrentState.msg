@@ -20,3 +20,4 @@ float64 yaw
 float64 dt
 uint8       state_valid
 uint8 filtered
+bool hover

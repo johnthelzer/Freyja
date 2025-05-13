@@ -14,7 +14,7 @@
   <!-- use "device:baudrate" for apm, "device" for asctec -->
   <arg name="comm_port"                 default="/dev/ttyUSB0:230400"/>
   <arg name="total_mass"                default="2.814"/>
-  <arg name="thrust_scaler" 		        default="92"/>
+  <arg name="thrust_scaler" 		        default="90"/>
 
   <!-- launch a handler for discrete waypoints -->
   <arg name="use_waypoint_handler"      default="false" />
@@ -105,6 +105,8 @@
   <node name="controller" pkg="control_system" type="controller"/>
   <!--trajectory generator node-->
   <node name="trajectory_generator" pkg="control_system" type="trajectory_generator"/>
+  <!--unscented kalman filter-->
+  <node name="unscented_kalman_filter" pkg="control_system" type="unscented_kalman_filter"/>
 
 
 </launch>

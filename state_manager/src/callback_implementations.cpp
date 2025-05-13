@@ -229,7 +229,7 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   tf::Matrix3x3(q).getRPY(roll_actual, pitch_actual, yaw_actual);
   pitch_actual = -1*pitch_actual; //FLU orientation from mavros vs FRD orientation we want- actual pitch is in opposite direction
   //yaw_actual = -1*(yaw_actual-(pi/2));
-  yaw_actual = pi/180*compass_yaw_;
+  yaw_actual = pi/180*compass_yaw_; //rad
 
   //get rpy angles and rotation matrix
   Eigen::Matrix<double, 3, 1> i_;

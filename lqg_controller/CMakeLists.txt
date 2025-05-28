@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   roscpp
   freyja_msgs
+  control_system_msgs
   cmake_modules
 )
 #pkg_search_module( Eigen3 REQUIRED eigen3 )

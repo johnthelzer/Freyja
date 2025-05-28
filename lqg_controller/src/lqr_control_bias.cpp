@@ -151,15 +151,21 @@ void LQRController::stateCallback( const freyja_msgs::CurrentState::ConstPtr &ms
   static Eigen::Matrix<double, 7, 1> current_state;
   static Eigen::Matrix<double, 7, 1> state_err;
 
-  //float yaw = msg->state_vector[8];
-  float yaw = msg->yaw;
+  float yaw = msg->yaw;//msg->state_vector[8];
   rot_yaw_ << std::cos(yaw), std::sin(yaw), 0,
              -std::sin(yaw), std::cos(yaw), 0,
               0, 0, 1;
              
   /* state is the first 6 elements, and yaw */
-  std::vector<double> cs  = {msg->pn, msg->pe, msg->pd, msg->vn, msg->ve, msg->vd, msg->roll, msg->pitch, msg->yaw};
-  current_state << Eigen::Map<const PosVelNED>( msg->state_vector.data() ),
+  std::vector<double> sv(13);
+  sv[0] = msg->pn;
+  sv[1] = msg->pe;
+  sv[2] = msg->pd;
+  sv[3] = msg->vn;
+  sv[4] = msg->ve;
+  sv[5] = msg->vd;
+  sv[8] = msg->yaw;
+  current_state << Eigen::Map<const PosVelNED>( sv.data() ),
                    double(yaw);
 
   /* set measurement for bias estimator */
@@ -191,10 +197,10 @@ void LQRController::trajectoryReferenceCallback( const TrajRef::ConstPtr &msg )
     Not currently using accelerations for FF.
   */
   reference_state_mutex_.lock();
-  reference_state_ << msg->pn, msg->pe, msg->pd, msg->vn, msg->ve, msg->vd, msg->yaw;
+  reference_state_ << msg->px_ref, msg->py_ref, msg->pz_ref, msg->vx_ref, msg->vy_ref, msg->vz_ref, msg->yaw_ref;
   reference_state_mutex_.unlock();
   
-  reference_ff_ << msg->an, msg->ae, msg->ad, 0.0;    // only NED accelerations
+  reference_ff_ << 0.0, 0.0, 0.0, 0.0;//msg->an, msg->ae, msg->ad, 0.0;    // only NED accelerations
   have_reference_update_ = true;
 }
 

@@ -17,18 +17,19 @@
 #include <ros/ros.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <freyja_msgs/CurrentState.h>
+#include <control_system_msgs/ReferenceState.h>
 #include <freyja_msgs/CtrlCommand.h>
 #include <freyja_msgs/ControllerDebug.h>
 #include <freyja_msgs/ReferenceState.h>
 #include <eigen3/Eigen/Dense>
 
-typedef freyja_msgs::ReferenceState TrajRef;
+typedef control_system_msgs::ReferenceState TrajRef;
 
 
 class LQRController
 {
   ros::NodeHandle nh_, priv_nh_;
-  freyja_msgs::CurrentState state_vector_;
+  //freyja_msgs::CurrentState state_vector_;
   Eigen::Matrix<double, 4, 1> reduced_state_;
   
   /* Reference state vector */

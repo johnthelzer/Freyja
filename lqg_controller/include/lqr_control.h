@@ -22,7 +22,7 @@
 #include <freyja_msgs/ReferenceState.h>
 #include <eigen3/Eigen/Dense>
 
-typedef freyja_msgs::ReferenceState TrajRef;
+typedef control_system_msgs::ReferenceState TrajRef;
 
 
 class LQRController

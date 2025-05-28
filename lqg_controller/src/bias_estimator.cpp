@@ -148,7 +148,8 @@ void BiasEstimator::state_propagation( )
                       best_estimate_.block<3,1>(6,0).cwiseMax(-BIAS_LIM_ABS) );
       }
       
-      /* fill state information: this will be unrolled by gcc */
+      /*
+
       for( int idx=0; idx < nStates; idx++ )
         state_msg_.state_vector[idx] = best_estimate_(idx);
       spmtx.unlock();
@@ -159,17 +160,17 @@ void BiasEstimator::state_propagation( )
       last_prop_t_ = te = std::chrono::high_resolution_clock::now();
       int dt = std::chrono::duration_cast<uSeconds>(te-ts).count();
       
-      /* Fill in extra debug information: subject to change */
+      
       state_msg_.state_vector[9] = static_cast<double>(n_stprops_since_update_);
       state_msg_.state_vector[10] = delta_t;
       //state_msg_.state_vector[10] = state_cov_P_.diagonal().norm();
       state_msg_.state_vector[11] = ctrl_input_u_.norm();
       bias_pub_.publish( state_msg_ );
 
-      std::this_thread::sleep_for( uSeconds(estimator_period_us_ - dt) );
+      std::this_thread::sleep_for( uSeconds(estimator_period_us_ - dt) );*/
     }
-    else
-      std::this_thread::sleep_for( uSeconds(estimator_period_us_) );
+    //else
+      //std::this_thread::sleep_for( uSeconds(estimator_period_us_) );
   }
 }
 
@@ -215,4 +216,3 @@ void BiasEstimator::getEstimatedBiases( Eigen::Matrix<double, 3, 1> &eb )
     updateOutputShapingFactor();
   eb = estimator_output_shaping_ * best_estimate_.tail<3>();
 }
-

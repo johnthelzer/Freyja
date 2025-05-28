@@ -205,13 +205,14 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   gps_odom_pn_ = msg -> pose.pose.position.y;
   gps_odom_pe_ = msg -> pose.pose.position.x;
   gps_odom_pd_ = -( msg -> pose.pose.position.z );
+  
   /*
   if( !have_arming_origin_ )
   {
     ROS_INFO_THROTTLE( 5, "StateManager:: Waiting for arming .." );
     return;
-  }
- */
+  }*/
+ 
   
   // armed at this point
   pn = gps_odom_pn_ + map_rtk_pn_ - arming_gps_pn_;
@@ -220,7 +221,7 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   
   vn = msg -> twist.twist.linear.y;
   ve = msg -> twist.twist.linear.x;
-  vd = ( msg -> twist.twist.linear.z ); //should be negative, but whatever
+  vd = ( msg -> twist.twist.linear.z ); //should be negative, but some problem with sign
   
   //get quaternion of drone, angles
   tf::Quaternion q;
@@ -297,6 +298,7 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
 
   lastUpdateTime_ = ros::Time::now();
   static freyja_msgs::CurrentState state_msg;
+  
   //p
   state_msg.pn = pn;
   state_msg.pe = pe;
@@ -320,8 +322,6 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   //dt
   state_msg.dt = time_since;
   
-
-  //state_msg.state_vector[8] = DEG2RAD( compass_yaw_ );
   
   state_msg.header.stamp = ros::Time::now();
   state_pub_.publish( state_msg );
@@ -355,6 +355,7 @@ bool StateManager::maplockArmingHandler( BoolServReq& rq, BoolServRsp& rp )
   /*  Service handler for when the vehicle is armed or disarmed.
      This must lock in/release all the map offsets needed by manager.
   */
+  
   if( !have_arming_origin_ )
   {
     lockArmingGps();  // set this locatin as origin

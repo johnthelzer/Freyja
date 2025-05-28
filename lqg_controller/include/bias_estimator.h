@@ -15,7 +15,7 @@
 
 #include <ros/ros.h>
 #include <eigen3/Eigen/Dense>
-
+#include <control_system_msgs/ReferenceState.h>
 #include <freyja_msgs/CurrentStateBiasEst.h>
 
 typedef std::chrono::microseconds uSeconds;

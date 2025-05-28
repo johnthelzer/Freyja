@@ -83,10 +83,16 @@ void LQRController::stateCallback( const freyja_msgs::CurrentState::ConstPtr &ms
   //for( int i=0; i<13; i++ )
   //  sv[i] = msg->state_vector[i];
   //const double *msgptr = msg -> state_vector.data();
-  std::vector<double> sv = {msg->pn, msg->pe, msg->pd, msg->vn, msg->ve, msg->vd, msg->roll, msg->pitch, msg->yaw};
   //std::vector<double> sv( msgptr, msgptr+13  );
-
-  float yaw = msg -> yaw;
+    std::vector<double> sv(13);
+  sv[0] = msg->pn;
+  sv[1] = msg->pe;
+  sv[2] = msg->pd;
+  sv[3] = msg->vn;
+  sv[4] = msg->ve;
+  sv[5] = msg->vd;
+  sv[8] = msg->yaw;
+  float yaw = sv[8];
   rot_yaw_ << std::cos(yaw), std::sin(yaw), 0,
             -std::sin(yaw), std::cos(yaw), 0,
              0, 0, 1;
@@ -114,7 +120,7 @@ void LQRController::trajectoryReferenceCallback( const TrajRef::ConstPtr &msg )
     greatly welcome.
   */
   reference_state_mutex_.lock();
-  reference_state_ << msg->pn, msg->pe, msg->pd, msg->vn, msg->ve, msg->vd, msg->yaw;
+  reference_state_ << msg->px_ref, msg->py_ref, msg->pz_ref, msg->vx_ref, msg->vy_ref, msg->vz_ref, msg->yaw_ref;
   reference_state_mutex_.unlock();
   
   have_reference_update_ = true;

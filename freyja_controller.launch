@@ -41,7 +41,7 @@
 
 
    <!--control node (see velctrl flag above)-->
-  <node name="lqg_controller" pkg="lqg_control" type="lqg_control_node"
+  <!--<node name="lqg_controller" pkg="lqg_control" type="lqg_control_node"
   			output="screen" if="$(eval not use_velctrl_only)">
 	  <param name="controller_rate"     type="int"    value="50"  />
   	<param name="total_mass"          type="double" value="$(arg total_mass)"/>
@@ -51,7 +51,7 @@
   	<param name="mass_estimation"     type="bool"   value="true" />
   	<param name="mass_correction"     type="bool"   value="false" />
   	<param name="enable_flatness_ff"  type="bool"   value="$(arg enable_flatness_ff)" />
-  </node>
+  </node>-->
 
   
   <!--
@@ -104,7 +104,7 @@
 
   <!--<node name="angle_receiver_node" pkg="arduino_raspi_communication" type="angle_receiver_node.py" /> -->
   <!--controller node-->
-  <!--<node name="controller" pkg="control_system" type="controller"/>-->
+  <node name="controller" pkg="control_system" type="controller"/>
   <!--trajectory generator node-->
   <node name="trajectory_generator" pkg="control_system" type="trajectory_generator"/>
   <!--unscented kalman filter-->

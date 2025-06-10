@@ -13,7 +13,7 @@
 
   <!-- use "device:baudrate" for apm, "device" for asctec -->
   <arg name="comm_port"                 default="/dev/ttyUSB0:230400"/>
-  <arg name="total_mass"                default="2.324"/>
+  <arg name="total_mass"                default="2.806"/>
   <arg name="thrust_scaler" 		        default="90"/>
 
   <!-- launch a handler for discrete waypoints -->
@@ -51,10 +51,10 @@
   	<param name="mass_estimation"     type="bool"   value="true" />
   	<param name="mass_correction"     type="bool"   value="false" />
   	<param name="enable_flatness_ff"  type="bool"   value="$(arg enable_flatness_ff)" />
-  </node>-->
+  </node>
 
   
-  <!--
+  
   <node name="lqr_vel_controller" pkg="lqr_control" type="lqr_vel_ctrl_node"
   			if="$(eval use_velctrl_only)">
     <param name="controller_rate"   type="int"    value="30" />
@@ -102,12 +102,14 @@
   
   <!--angle receiver node- only for when using encoders on real drone-->
 
-  <!--<node name="angle_receiver_node" pkg="arduino_raspi_communication" type="angle_receiver_node.py" /> -->
+  <!--<node name="angle_receiver_node" pkg="arduino_raspi_communication" type="angle_receiver_node.py" />-->
   <!--controller node-->
   <node name="controller" pkg="control_system" type="controller"/>
   <!--trajectory generator node-->
   <node name="trajectory_generator" pkg="control_system" type="trajectory_generator"/>
   <!--unscented kalman filter-->
   <!--<node name="unscented_kalman_filter" pkg="control_system" type="unscented_kalman_filter"/>-->
+  <!--rosserial node-->
+  <node name="serial_node" pkg="rosserial_python" type="serial_node.py"/>
 
 </launch>

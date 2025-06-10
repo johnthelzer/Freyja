@@ -183,9 +183,6 @@ void StateManager::imuCallback(const sensor_msgs::Imu::ConstPtr &msg)
 {
   //Mavros gives us angular velocity in FLU (drone frame)
   //We get wx,wy,wz in FRD (also drone frame)
-  wx_d = msg -> angular_velocity.x; //F
-  wy_d = -1*(msg -> angular_velocity.y); //R
-  wz_d = -1*(msg -> angular_velocity.z); //D
 
 }
 void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &msg )
@@ -198,6 +195,7 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
         /mavros/local_position/local  --> zeros at arming, has IMU frame quirk.
   */
   double time_since = (ros::Time::now() - lastUpdateTime_).toSec();
+  lastUpdateTime_ = ros::Time::now();
 
   static double pn, pe, pd, vn, ve, vd;
   
@@ -254,49 +252,104 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
               0, std::sin(roll_actual), std::cos(roll_actual);
   RAB = RAB_yaw*RAB_pitch*RAB_roll;
 
-  //get drone angular velocity
-  double wn_total, we_total, wd_total;
-  double wn_d, we_d, wd_d;
-  Eigen::Matrix<double, 3, 1> wd_FRD; //drone angular velocity, FRD
-  Eigen::Matrix<double, 3, 1> wd_NED; //drone angular velocity, NED
-  wd_FRD << wx_d, wy_d, wz_d;
-  wd_NED = RAB*wd_FRD; //use rotation matrix to get drone angular velocity in NED
-  
-  wn_d = wd_NED(0,0);
-  we_d = wd_NED(1,0);
-  wd_d = wd_NED(2,0);
-
-  //get payload rotation matrices
+  //find rotation matrix for payload relative to drone
   Eigen::Matrix<double, 3, 3> RBC_pitch;
   Eigen::Matrix<double, 3, 3> RBC_roll;
+  Eigen::Matrix<double, 3, 3> RBC;
   RBC_pitch << std::cos(pitch_p), 0, std::sin(pitch_p),
-              0, 1, 0,
-              -1*std::sin(pitch_p), 0, std::cos(pitch_p);
+            0, 1, 0,
+            -1*std::sin(pitch_p), 0, std::cos(pitch_p);
   RBC_roll << 1, 0, 0,
               0, std::cos(roll_p), -1*std::sin(roll_p),
               0, std::sin(roll_p), std::cos(roll_p);
-  //get payload angular velocity
-  double wn_p, we_p, wd_p;
-  Eigen::Matrix<double, 3, 1> w_p;
-  w_p = RAB*(pitchdot_p*j_ + rolldot_p*RBC_pitch*i_);
-  wn_p = w_p(0,0);
-  we_p = w_p(1,0);
-  wd_p = w_p(2,0);
-  //get total angular velocity
-  wn_total = wn_d + wn_p;
-  we_total = we_d + we_p;
-  wd_total = wd_d + wd_p;
+  RBC = RBC_pitch*RBC_roll;
 
   //get payload vector q
+  Eigen::Matrix<double, 3, 3> RAC;
+  RAC = RAB*RBC;
   double qn, qe, qd;
   Eigen::Matrix<double, 3, 1> q_;
-  q_ = RAB*RBC_pitch*RBC_roll*k_;
+  q_ = RAC*k_;
+  //q_ = RAB*RBC_pitch*RBC_roll*k_;
   qn = q_(0,0);
   qe = q_(1,0);
   qd = q_(2,0);
 
+  //find quaternion from total rotation matrix
+  double m00, m01, m02, m10, m11, m12, m20, m21, m22;
+  m00 = RAC(0,0);
+  m01 = RAC(0,1);
+  m02 = RAC(0,2);
+  m10 = RAC(1,0);
+  m11 = RAC(1,1);
+  m12 = RAC(1,2);
+  m20 = RAC(2,0);
+  m21 = RAC(2,1);
+  m22 = RAC(2,2);
+  
+  double tr = m00+m11+m22;
+  double S;
+  if (tr > 0)
+  {
+    S = (std::sqrt(tr+1))*2;
+    quat_w = 0.25*S;
+    quat_x = (m21-m12)/S;
+    quat_y = (m02-m20)/S;
+    quat_z = (m10-m01)/S;
+  }
+  else if((m00>m11) && (m00>m22))
+  {
+    S = (std::sqrt(1+m00-m11-m22))*2;
+    quat_w = (m21-m12)/S;
+    quat_x = 0.25*S;
+    quat_y = (m01+m10)/S;
+    quat_z = (m02+m20)/S;
+  }
+  else if(m11>m22)
+  {
+    S = (std::sqrt(1+m11-m00-m22))*2;
+    quat_w = (m02-m20)/S;
+    quat_x = (m01+m10)/S;
+    quat_y = 0.25*S;
+    quat_z = (m12+m21)/S;
+  }
+  else
+  {
+    S = (std::sqrt(1+m22-m00-m11))*2;
+    quat_w = (m10-m01)/S;
+    quat_x = (m02+m20)/S;
+    quat_y = (m12+m21)/S;
+    quat_z = 0.25*S;
+  }
+  double quat_w_dot= (quat_w-quat_w_old)/time_since;
+  double quat_x_dot = (quat_x-quat_x_old)/time_since;
+  double quat_y_dot = (quat_y-quat_y_old)/time_since;
+  double quat_z_dot = (quat_z-quat_z_old)/time_since;
 
-  lastUpdateTime_ = ros::Time::now();
+  Eigen::Matrix<double, 4, 1> quat_dot_;
+  quat_dot_ << quat_w_dot, quat_x_dot, quat_y_dot, quat_z_dot;
+  Eigen::Matrix<double, 3, 4> E;
+  E << -quat_x, quat_w, -quat_z, quat_y,
+      -quat_y, quat_z, quat_w, -quat_x,
+      -quat_z, -quat_y, quat_x, quat_w;
+  /*
+  double wx_total, wy_total, wz_total;
+  wx_total = 2/time_since*(quat_w_old*quat_x - quat_x_old*quat_w - quat_y_old*quat_z + quat_z_old*quat_y);
+  wy_total = 2/time_since*(quat_w_old*quat_y + quat_x_old*quat_z - quat_y_old*quat_w - quat_z_old*quat_x);
+  wz_total = 2/time_since*(quat_w_old*quat_z - quat_x_old*quat_y + quat_y_old*quat_x - quat_z_old*quat_w);*/
+  //weird quirk of this method- have to transform with yaw matrix to get to NED angular velocity
+  
+  //Eigen::Matrix<double, 3, 1> w_quat;
+  //w_quat << wx_total, wy_total, wz_total;
+  Eigen::Matrix<double, 3, 1> w_;
+  w_ = 2*E*quat_dot_; //RAB_yaw*w_quat;
+  wn_total = w_(0,0);
+  we_total = w_(1,0);
+  wd_total = w_(2,0);
+  quat_x_old = quat_x;
+  quat_y_old = quat_y;
+  quat_z_old = quat_z;
+  quat_w_old = quat_w;
   static freyja_msgs::CurrentState state_msg;
   
   //p
@@ -315,6 +368,13 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   state_msg.wn = wn_total;
   state_msg.we = we_total;
   state_msg.wd = wd_total;
+  //debugging quaternions
+  /*
+  state_msg.S = S;
+  state_msg.quat_w = quat_w;
+  state_msg.quat_x = quat_x;
+  state_msg.quat_y = quat_y;
+  state_msg.quat_z = quat_z;*/
   //rpy
   state_msg.roll = roll_actual;
   state_msg.pitch = pitch_actual;
@@ -322,25 +382,15 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   //dt
   state_msg.dt = time_since;
   
-  
   state_msg.header.stamp = ros::Time::now();
   state_pub_.publish( state_msg );
 }
 
 void StateManager::payloadCallback(const std_msgs::Float32MultiArray::ConstPtr &msg)
 {
-  
+
   roll_p = pi/180*(msg -> data[0]);
   pitch_p = pi/180*(msg -> data[1]);
-  rolldot_p = pi/180*(msg -> data[2]);
-  pitchdot_p = pi/180*(msg -> data[3]);
-  
-  /*
-  roll_p = 0.0;
-  pitch_p = 0.0;
-  rolldot_p = 0.0;
-  pitchdot_p = 0.0;
-  */
 }
 
 void StateManager::mavrosRtkBaselineCallback( const geometry_msgs::Vector3::ConstPtr &msg )

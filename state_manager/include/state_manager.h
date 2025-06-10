@@ -68,8 +68,13 @@ class StateManager
   /* Book-keeping for velocities and rates */
   float last_pn_, last_pe_, last_pd_;
   float last_roll_, last_pitch_, last_yaw_;
-  double wx_d, wy_d, wz_d; //angular velocities of drone
-  double roll_p, pitch_p, rolldot_p, pitchdot_p;
+  double roll_p, pitch_p;
+  double quat_x, quat_y, quat_z, quat_w;
+  double quat_x_old, quat_y_old, quat_z_old, quat_w_old;
+
+
+  double wn_total; double we_total; double wd_total;
+  
   
   ros::Time lastUpdateTime_;
   

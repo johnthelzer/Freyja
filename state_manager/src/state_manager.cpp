@@ -111,16 +111,25 @@ void StateManager::initPixhawkManager()
   compass_sub_ = nh_.subscribe( "/mavros/global_position/compass_hdg", 1, 
 				                &StateManager::mavrosCompassCallback, this );
 	imu_sub = nh_.subscribe("/mavros/imu/data", 1, &StateManager::imuCallback, this);
-  payload_sub = nh_.subscribe("/theta_info", 1, &StateManager::payloadCallback, this);
+  payload_sub = nh_.subscribe("/payload_state", 1, &StateManager::payloadCallback, this);
   maplock_srv_ = nh_.advertiseService( "/lock_arming_mapframe", 
                         &StateManager::maplockArmingHandler, this );
-  wx_d = 0;
-  wy_d = 0;
-  wz_d = 0;
+  
   roll_p = 0;
   pitch_p = 0;
-  rolldot_p = 0;
-  pitchdot_p = 0;
+  quat_x_old = 0;
+  quat_y_old = 0;
+  quat_z_old = 0;
+  quat_w_old = 1;
+  quat_x = 0;
+  quat_y = 0;
+  quat_z = 0;
+  quat_w = 0;
+
+  wn_total = 0;
+  we_total = 0;
+  wd_total = 0;
+  
 }
 
 void StateManager::initCameraManager()

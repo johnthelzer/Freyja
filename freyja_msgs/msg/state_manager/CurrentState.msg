@@ -14,6 +14,12 @@ float64 qd
 float64 wn
 float64 we
 float64 wd
+# added for debugging quaternions:
+float64 S
+float64 quat_w
+float64 quat_x
+float64 quat_y
+float64 quat_z
 float64 roll
 float64 pitch
 float64 yaw

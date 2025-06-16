@@ -71,9 +71,14 @@ class StateManager
   double roll_p, pitch_p;
   double quat_x, quat_y, quat_z, quat_w;
   double quat_x_old, quat_y_old, quat_z_old, quat_w_old;
+  //lowpass filtering drone angles:
+  double roll_raw, pitch_raw, yaw_raw;
+  double roll_filtered, pitch_filtered, yaw_filtered;
+  double roll_filtered_old, pitch_filtered_old, yaw_filtered_old;
 
 
   double wn_total; double we_total; double wd_total;
+  double wn_total_old, we_total_old, wd_total_old;
   
   
   ros::Time lastUpdateTime_;

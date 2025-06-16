@@ -230,6 +230,22 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   //yaw_actual = -1*(yaw_actual-(pi/2));
   yaw_actual = pi/180*compass_yaw_; //rad
 
+
+  //lowpass filtering drone angles
+  double w0 = 2*pi*1;
+  roll_raw = roll_actual;
+  pitch_raw = pitch_actual;
+  yaw_raw = yaw_actual;
+
+  roll_filtered = time_since*w0*roll_raw + (1-time_since*w0)*roll_filtered_old;
+  pitch_filtered = time_since*w0*pitch_raw + (1-time_since*w0)*pitch_filtered_old;
+  yaw_filtered = time_since*w0*yaw_raw + (1-time_since*w0)*yaw_filtered_old;
+
+  roll_filtered_old = roll_filtered;
+  pitch_filtered_old = pitch_filtered;
+  yaw_filtered_old = yaw_filtered;
+  
+
   //get rpy angles and rotation matrix
   Eigen::Matrix<double, 3, 1> i_;
   i_ << 1, 0, 0;
@@ -241,15 +257,15 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   Eigen::Matrix<double, 3, 3> RAB_pitch;
   Eigen::Matrix<double, 3, 3> RAB_roll;
   Eigen::Matrix<double, 3, 3> RAB;
-  RAB_yaw << std::cos(yaw_actual), -1*std::sin(yaw_actual), 0,
-            std::sin(yaw_actual), std::cos(yaw_actual), 0,
+  RAB_yaw << std::cos(yaw_filtered), -1*std::sin(yaw_filtered), 0,
+            std::sin(yaw_filtered), std::cos(yaw_filtered), 0,
             0, 0, 1;
-  RAB_pitch << std::cos(pitch_actual), 0, std::sin(pitch_actual),
+  RAB_pitch << std::cos(pitch_filtered), 0, std::sin(pitch_filtered),
             0, 1, 0,
             -1*std::sin(pitch_actual), 0, std::cos(pitch_actual);
   RAB_roll << 1, 0, 0,
-              0, std::cos(roll_actual), -1*std::sin(roll_actual),
-              0, std::sin(roll_actual), std::cos(roll_actual);
+              0, std::cos(roll_filtered), -1*std::sin(roll_filtered),
+              0, std::sin(roll_filtered), std::cos(roll_filtered);
   RAB = RAB_yaw*RAB_pitch*RAB_roll;
 
   //find rotation matrix for payload relative to drone
@@ -346,6 +362,14 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   wn_total = w_(0,0);
   we_total = w_(1,0);
   wd_total = w_(2,0);
+  //lowpass filter w
+  wn_total = time_since*w0*wn_total + (1-time_since*w0)*wn_total_old;
+  we_total = time_since*w0*we_total + (1-time_since*w0)*we_total_old;
+  wd_total = time_since*w0*wd_total + (1-time_since*w0)*wd_total_old;
+
+  wn_total_old = wn_total;
+  we_total_old = we_total;
+  wd_total_old = wd_total;
   quat_x_old = quat_x;
   quat_y_old = quat_y;
   quat_z_old = quat_z;
@@ -376,9 +400,9 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   state_msg.quat_y = quat_y;
   state_msg.quat_z = quat_z;*/
   //rpy
-  state_msg.roll = roll_actual;
-  state_msg.pitch = pitch_actual;
-  state_msg.yaw = yaw_actual;
+  state_msg.roll = roll_filtered;
+  state_msg.pitch = pitch_filtered;
+  state_msg.yaw = yaw_filtered;
   //dt
   state_msg.dt = time_since;
   

@@ -129,6 +129,14 @@ void StateManager::initPixhawkManager()
   wn_total = 0;
   we_total = 0;
   wd_total = 0;
+  wn_total_old = 0;
+  we_total_old = 0;
+  wd_total_old = 0;
+
+  roll_filtered_old = 0.0;
+  pitch_filtered_old = 0.0;
+  yaw_filtered_old = 0.0;
+
   
 }
 

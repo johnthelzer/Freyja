@@ -405,6 +405,7 @@ void StateManager::mavrosGpsOdomCallback( const nav_msgs::Odometry::ConstPtr &ms
   state_msg.yaw = yaw_filtered;
   //dt
   state_msg.dt = time_since;
+  state_msg.armed = have_arming_origin_;
   
   state_msg.header.stamp = ros::Time::now();
   state_pub_.publish( state_msg );
